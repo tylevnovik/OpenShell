@@ -27,6 +27,7 @@ public sealed class InProcessEventBus : IEventBus, IDisposable
     private readonly object _lock = new();
     private readonly Task _consumer;
     private readonly CancellationTokenSource _cts = new();
+    private int _disposeState;
 
     public InProcessEventBus()
     {
@@ -153,6 +154,9 @@ public sealed class InProcessEventBus : IEventBus, IDisposable
     /// <summary>停止消费者任务并释放资源。可重入。</summary>
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposeState, 1) != 0)
+            return;
+
         _queue.Writer.TryComplete();
         _cts.Cancel();
         try

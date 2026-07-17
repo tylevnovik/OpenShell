@@ -14,7 +14,7 @@ namespace OpenShell.IntegrationTests;
 /// </summary>
 public sealed class ProjectStabilityComplianceTests
 {
-    [Fact(Skip = "pending T-500")]
+    [Fact]
     public void EventBus_Dispose_IsIdempotent()
     {
         var bus = new InProcessEventBus();

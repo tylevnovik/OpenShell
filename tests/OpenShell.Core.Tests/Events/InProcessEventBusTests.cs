@@ -112,7 +112,7 @@ public sealed class InProcessEventBusTests : IDisposable
         bCalls.Should().Be(1);
     }
 
-    [Fact(Skip = "bug: InProcessEventBus.Dispose() is not idempotent — calling _cts.Cancel() on an already-disposed CTS throws ObjectDisposedException. The code comment says '可重入' but the implementation is not actually reentrant.")]
+    [Fact]
     public void Dispose_StopsConsumerLoop()
     {
         // Act: 在 bus dispose 后再 publish 不应抛异常 (TryWrite 静默丢弃)。
