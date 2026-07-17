@@ -42,7 +42,7 @@ public sealed class ProjectStabilityComplianceTests
         Assert.IsType<DateTimeOffset>(token.Value);
     }
 
-    [Fact(Skip = "pending T-504")]
+    [Fact]
     public async Task FileSystemProvider_HonorsPreCancelledToken()
     {
         using var tempDir = new TempDir();
@@ -55,7 +55,7 @@ public sealed class ProjectStabilityComplianceTests
             async () => await provider.GetItemAsync(path, cts.Token));
     }
 
-    [Fact(Skip = "pending T-504")]
+    [Fact]
     public async Task SftpProvider_HonorsPreCancelledTokenBeforeCredentialLookup()
     {
         using var provider = new SftpProvider(new NullCredentialProvider());

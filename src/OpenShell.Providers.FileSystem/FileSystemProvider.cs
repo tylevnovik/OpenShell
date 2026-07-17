@@ -43,6 +43,7 @@ public sealed class FileSystemProvider :
 
     public ValueTask<IItem?> GetItemAsync(ItemPath path, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var fsPath = ToFsPath(path);
         FileSystemInfo? info = Directory.Exists(fsPath)
             ? new DirectoryInfo(fsPath)
@@ -57,6 +58,7 @@ public sealed class FileSystemProvider :
         EnumerationOptions options,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var fsPath = ToFsPath(path);
         if (!Directory.Exists(fsPath))
             yield break;
@@ -110,6 +112,7 @@ public sealed class FileSystemProvider :
 
     public ValueTask<Stream> OpenReadAsync(ItemPath path, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var fsPath = ToFsPath(path);
         return ValueTask.FromResult<Stream>(new FileStream(fsPath, FileMode.Open, FileAccess.Read, FileShare.Read,
             bufferSize: 81920, useAsync: true));
@@ -119,6 +122,7 @@ public sealed class FileSystemProvider :
 
     public ValueTask<Stream> OpenWriteAsync(ItemPath path, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var fsPath = ToFsPath(path);
         var dir = IOPath.GetDirectoryName(fsPath);
         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
@@ -130,6 +134,7 @@ public sealed class FileSystemProvider :
 
     public ValueTask<bool> CanWriteAsync(ItemPath path, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var fsPath = ToFsPath(path);
         if (System.IO.File.Exists(fsPath))
         {
@@ -149,6 +154,7 @@ public sealed class FileSystemProvider :
 
     public ValueTask CreateDirectoryAsync(ItemPath path, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var fsPath = ToFsPath(path);
         Directory.CreateDirectory(fsPath);
         return ValueTask.CompletedTask;
@@ -156,6 +162,7 @@ public sealed class FileSystemProvider :
 
     public ValueTask DeleteAsync(ItemPath path, bool recurse, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var fsPath = ToFsPath(path);
         if (Directory.Exists(fsPath))
         {
@@ -174,6 +181,7 @@ public sealed class FileSystemProvider :
 
     public ValueTask RenameAsync(ItemPath path, string newName, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var fsPath = ToFsPath(path);
         var newFsPath = IOPath.Combine(IOPath.GetDirectoryName(fsPath) ?? string.Empty, newName);
 
@@ -193,6 +201,7 @@ public sealed class FileSystemProvider :
         DateTimeOffset? accessed,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var fsPath = ToFsPath(path);
         if (Directory.Exists(fsPath))
         {
@@ -211,6 +220,7 @@ public sealed class FileSystemProvider :
 
     public ValueTask<PropertyBag> GetPropertiesAsync(IItem item, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var fsPath = ToFsPath(item.Path);
         FileSystemInfo? info = Directory.Exists(fsPath)
             ? new DirectoryInfo(fsPath)
@@ -229,6 +239,7 @@ public sealed class FileSystemProvider :
 
     public async ValueTask<IReadOnlyList<ProviderDrive>> GetDrivesAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var drives = await Task.Run(() => System.IO.DriveInfo.GetDrives(), cancellationToken).ConfigureAwait(false);
         var result = new List<ProviderDrive>(drives.Length);
         foreach (var d in drives)

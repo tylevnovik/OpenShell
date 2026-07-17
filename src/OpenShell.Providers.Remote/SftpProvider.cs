@@ -66,6 +66,7 @@ public sealed class SftpProvider :
     /// <summary>Per ADR-0001 §1: read a single item at <paramref name="path"/>. Path 不存在返回 null。</summary>
     public async ValueTask<IItem?> GetItemAsync(ItemPath path, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var (user, host, port, remotePath) = ParseInternalPath(path.InternalPath);
         var rp = NormalizeRemotePath(remotePath);
         RemotePathValidator.Validate(rp); // ADR-0034 §6: 路径安全校验。
@@ -99,6 +100,7 @@ public sealed class SftpProvider :
         EnumerationOptions options,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var (user, host, port, remotePath) = ParseInternalPath(path.InternalPath);
         var rp = NormalizeRemotePath(remotePath);
         RemotePathValidator.Validate(rp); // ADR-0034 §6: 路径安全校验。
@@ -187,6 +189,7 @@ public sealed class SftpProvider :
 
     public async ValueTask<Stream> OpenReadAsync(ItemPath path, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var (user, host, port, remotePath) = ParseInternalPath(path.InternalPath);
         var rp = NormalizeRemotePath(remotePath);
         RemotePathValidator.Validate(rp); // ADR-0034 §6: 路径安全校验。
@@ -209,6 +212,7 @@ public sealed class SftpProvider :
 
     public async ValueTask<Stream> OpenWriteAsync(ItemPath path, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var (user, host, port, remotePath) = ParseInternalPath(path.InternalPath);
         var rp = NormalizeRemotePath(remotePath);
         RemotePathValidator.Validate(rp); // ADR-0034 §6: 路径安全校验。
@@ -242,6 +246,7 @@ public sealed class SftpProvider :
 
     public async ValueTask<bool> CanWriteAsync(ItemPath path, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         // SFTP 无法预先准确判断写权限, 这里用启发式:
         // 1) 连接 + 鉴权成功 → 至少有登录权限
         // 2) 路径的父目录存在 → 通常可写
@@ -257,6 +262,10 @@ public sealed class SftpProvider :
                 client => string.IsNullOrEmpty(parent) ? null : (SftpFileAttributes?)client.GetAttributes(parent),
                 cancellationToken).ConfigureAwait(false);
             return parentAttrs is null || parentAttrs.IsDirectory;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch
         {
@@ -287,6 +296,7 @@ public sealed class SftpProvider :
         IProgress<long>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(source);
         var (user, host, port, remotePath) = ParseInternalPath(dest.InternalPath);
         var rp = NormalizeRemotePath(remotePath);
@@ -350,6 +360,7 @@ public sealed class SftpProvider :
 
     public async ValueTask<PropertyBag> GetPropertiesAsync(IItem item, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var (user, host, port, remotePath) = ParseInternalPath(item.Path.InternalPath);
         var rp = NormalizeRemotePath(remotePath);
         RemotePathValidator.Validate(rp); // ADR-0034 §6: 路径安全校验。
@@ -406,6 +417,7 @@ public sealed class SftpProvider :
     /// </summary>
     public async ValueTask<bool> TestConnectionAsync(string user, string host, int port, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         try
         {
             await _pool.ExecuteAsync(
@@ -417,6 +429,10 @@ public sealed class SftpProvider :
                 },
                 cancellationToken).ConfigureAwait(false);
             return true;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch
         {
@@ -645,6 +661,7 @@ internal sealed class SftpConnectionPool : IDisposable
         Func<SftpClient, TResult> action,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var conn = GetOrCreate(user, host, port);
         await conn.Semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -667,6 +684,7 @@ internal sealed class SftpConnectionPool : IDisposable
         Action<SftpClient> action,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var conn = GetOrCreate(user, host, port);
         await conn.Semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -746,10 +764,15 @@ internal sealed class SftpConnectionPool : IDisposable
     private static async ValueTask ConnectAsync(
         SftpClient client, string user, string host, int port, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         try
         {
             // SSH.NET 的 Connect 是同步阻塞调用, 用 Task.Run 释放调用线程。
             await Task.Run(() => client.Connect(), ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (SshAuthenticationException ex)
         {
