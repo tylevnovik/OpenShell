@@ -24,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\OpenShell.Core\OpenShell.Core.csproj" />
     <ProjectReference Include="..\..\src\OpenShell.Providers.FileSystem\OpenShell.Providers.FileSystem.csproj" />
+    <ProjectReference Include="..\..\src\OpenShell.Providers.Remote\OpenShell.Providers.Remote.csproj" />
     <ProjectReference Include="..\OpenShell.TestUtils\OpenShell.TestUtils.csproj" />
   </ItemGroup>
 
