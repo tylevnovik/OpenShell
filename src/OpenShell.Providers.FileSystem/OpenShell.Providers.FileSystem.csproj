@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>OpenShell.Providers.FileSystem</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <PackageId>OpenShell.Providers.FileSystem</PackageId>
+    <Description>FileSystem provider for OpenShell.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpenShell.Core\OpenShell.Core.csproj" />
+  </ItemGroup>
+
+</Project>

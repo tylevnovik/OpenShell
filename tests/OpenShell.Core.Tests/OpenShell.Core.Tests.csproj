@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>OpenShell.Core.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="NSubstitute" />
+    <PackageReference Include="Coverlet.collector" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <!-- 解决 NSubstitute → Castle.Core 传递依赖的 NU1603 警告。 -->
+    <PackageReference Include="System.ComponentModel.TypeConverter" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\OpenShell.Core\OpenShell.Core.csproj" />
+    <ProjectReference Include="..\..\src\OpenShell.Providers.FileSystem\OpenShell.Providers.FileSystem.csproj" />
+    <ProjectReference Include="..\..\src\OpenShell.Providers.Variables\OpenShell.Providers.Variables.csproj" />
+    <ProjectReference Include="..\OpenShell.TestUtils\OpenShell.TestUtils.csproj" />
+    <!-- T-301: CLI 进程级 E2E 测试需要 openshell-cli.exe 已构建。ReferenceOutputAssembly=false
+         确保不引入程序集引用，仅触发构建依赖。 -->
+    <ProjectReference Include="..\..\src\OpenShell.Cli.Host\OpenShell.Cli.Host.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>

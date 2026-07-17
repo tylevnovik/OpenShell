@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>OpenShell.DotnetTool</RootNamespace>
+    <!-- ADR-0039 §10: dotnet 全局工具, 入口名 openshell (dotnet openshell pack/sign/push/install/restore)。 -->
+    <AssemblyName>openshell</AssemblyName>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>openshell</ToolCommandName>
+    <!-- 全局工具需 packable 以便 dotnet tool install。 -->
+    <IsPackable>true</IsPackable>
+    <PackageId>OpenShell.DotnetTool</PackageId>
+    <Description>OpenShell dotnet global tool: pack, sign, push, install, and restore providers.</Description>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpenShell.Core\OpenShell.Core.csproj" />
+  </ItemGroup>
+
+</Project>

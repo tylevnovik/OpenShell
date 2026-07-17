@@ -1,0 +1,5 @@
+# content_ops.osh — 内容读写测试脚本
+# 验证 Set-Content / Get-Content 读写文件内容。
+# 输出：文件内容到 stdout，供测试断言。
+Set-Content output.txt "test content line1"
+Get-Content output.txt

@@ -1,0 +1,10 @@
+# mixed.osh — #lang 块互操作脚本
+# .osh 文件内嵌入 #lang ps1 块，验证块内 PS 语法执行 + 块外现代语法执行。
+#lang ps1 {
+  function Legacy-Greet($name) {
+    return "PS: " + $name
+  }
+}
+
+$modernGreeting = "Modern: World"
+$modernGreeting

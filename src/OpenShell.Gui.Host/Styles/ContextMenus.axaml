@@ -1,0 +1,22 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Style Selector="ContextMenu">
+    <Setter Property="Padding" Value="4" />
+  </Style>
+
+  <Style Selector="MenuItem">
+    <Setter Property="Padding" Value="8,4" />
+    <Setter Property="CornerRadius" Value="4" />
+  </Style>
+
+  <Style Selector="MenuItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAltListLowBrush}" />
+  </Style>
+
+  <Style Selector="Separator">
+    <Setter Property="Margin" Value="0,4" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+  </Style>
+
+</Styles>

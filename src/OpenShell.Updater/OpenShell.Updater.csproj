@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- ADR-0037 §6: 独立 openshell-updater 进程, 命名与 GitHubReleasesUpdateService 期望一致。 -->
+    <AssemblyName>openshell-updater</AssemblyName>
+    <RollForward>LatestMinor</RollForward>
+    <!-- 单文件自包含发布, 与 OpenShell.Cli.Host 一致 (ADR-0032 §2)。 -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <!-- 独立更新器无框架依赖, 仅用 BCL; 关闭 doc 文件生成以减少发布体积。 -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+</Project>

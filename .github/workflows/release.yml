@@ -1,0 +1,117 @@
+# ADR-0032 §11: Release workflow. Triggered by git tag v*.
+# Builds single-file self-contained binaries for all 6 RIDs, generates SHA256SUMS,
+# and uploads to GitHub Release. NuGet packages pushed to nuget.org (if API key set).
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: publish (${{ matrix.rid }})
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64]
+    runs-on: ${{ contains(matrix.rid, 'win') && 'windows-latest' || (contains(matrix.rid, 'osx') && 'macos-latest' || 'ubuntu-latest') }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish CLI
+        run: >
+          dotnet publish src/OpenShell.Cli.Host/OpenShell.Cli.Host.csproj
+          -c Release
+          -r ${{ matrix.rid }}
+          -o artifacts/dist/${{ matrix.rid }}
+          -p:Version=${GITHUB_REF_NAME#v}
+          --self-contained
+
+      - name: Publish GUI
+        run: >
+          dotnet publish src/OpenShell.Gui.Host/OpenShell.Gui.Host.csproj
+          -c Release
+          -r ${{ matrix.rid }}
+          -o artifacts/dist/${{ matrix.rid }}
+          -p:Version=${GITHUB_REF_NAME#v}
+          --self-contained
+
+      - name: Stage binaries
+        shell: bash
+        run: |
+          mkdir -p artifacts/stage
+          cd artifacts/dist/${{ matrix.rid }}
+          if [ "${{ contains(matrix.rid, 'win') }}" = "true" ]; then
+            tar -czf ../../stage/openshell-${GITHUB_REF_NAME#v}-${{ matrix.rid }}.tar.gz openshell-cli.exe openshell-gui.exe
+          else
+            tar -czf ../../stage/openshell-${GITHUB_REF_NAME#v}-${{ matrix.rid }}.tar.gz openshell-cli openshell-gui
+            chmod +x openshell-cli openshell-gui
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.rid }}
+          path: artifacts/stage/*
+
+  release:
+    name: create release + checksums
+    needs: publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all dist artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/stage
+          merge-multiple: true
+
+      - name: Generate SHA256SUMS
+        working-directory: artifacts/stage
+        run: |
+          sha256sum *.tar.gz > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/stage/*.tar.gz
+            artifacts/stage/SHA256SUMS
+          generate_release_notes: true
+          draft: true
+
+  nuget:
+    name: push nuget packages
+    needs: release
+    runs-on: ubuntu-latest
+    if: ${{ vars.NUGET_API_KEY != '' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Pack
+        run: >
+          dotnet pack src/OpenShell.Core/OpenShell.Core.csproj
+          -c Release
+          -o artifacts/nuget
+          -p:Version=${GITHUB_REF_NAME#v}
+
+      - name: Push to nuget.org
+        run: dotnet nuget push artifacts/nuget/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate

@@ -1,0 +1,10 @@
+# filesystem_ops.osh — 文件系统操作测试脚本
+# 验证 mkdir / 创建文件 / cp / mv / rm 序列。
+# 执行后通过文件系统状态验证（测试侧检查文件是否存在）。
+mkdir FsTestDir
+cd FsTestDir
+Set-Content file1.txt "hello world"
+cp file1.txt file2.txt
+mv file1.txt renamed.txt
+rm file2.txt
+cd ..

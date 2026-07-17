@@ -1,0 +1,72 @@
+<Project>
+
+  <ItemGroup>
+    <!-- Avalonia (GUI Host) -->
+    <PackageVersion Include="Avalonia" Version="11.0.10" />
+    <PackageVersion Include="Avalonia.Desktop" Version="11.0.10" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="11.0.10" />
+    <PackageVersion Include="Avalonia.ReactiveUI" Version="11.0.10" />
+    <PackageVersion Include="Avalonia.Controls.DataGrid" Version="11.0.10" />
+    <PackageVersion Include="Avalonia.Diagnostics" Version="11.0.10" />
+    <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.0.10" />
+
+    <!-- ReactiveUI -->
+    <PackageVersion Include="ReactiveUI" Version="20.1.1" />
+    <PackageVersion Include="ReactiveUI.Fody" Version="19.5.41" />
+    <PackageVersion Include="System.Reactive" Version="6.0.1" />
+
+    <!-- MS Hosting / DI / Logging (8.0 → 9.0: ADR-0031 OpenTelemetry 1.11.x 依赖 9.0.0) -->
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="9.0.0" />
+
+    <!-- Test -->
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+    <PackageVersion Include="xunit" Version="2.9.0" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageVersion Include="FluentAssertions" Version="6.12.0" />
+    <PackageVersion Include="NSubstitute" Version="2.0.3" />
+    <PackageVersion Include="Coverlet.collector" Version="6.0.2" />
+    <PackageVersion Include="Coverlet.msbuild" Version="6.0.2" />
+    <PackageVersion Include="Avalonia.Headless" Version="11.0.10" />
+    <PackageVersion Include="Avalonia.Headless.XUnit" Version="11.0.10" />
+    <PackageVersion Include="BenchmarkDotNet" Version="0.13.12" />
+    <PackageVersion Include="FsCheck" Version="3.0.0" />
+
+    <!-- 显式版本以解决 NSubstitute → Castle.Core → System.ComponentModel.TypeConverter 的 NU1603。
+         (Castle.Core 4.0.0 要求 >= 4.0.1，但 nuget.org 上最低可用版本为 4.1.0。) -->
+    <PackageVersion Include="System.ComponentModel.TypeConverter" Version="4.1.0" />
+
+    <!-- TOML parsing (ADR-0024 aliases / ADR-0022 config) -->
+    <PackageVersion Include="Tomlyn" Version="0.17.0" />
+
+    <!-- Remote providers (ADR-0019): SSH.NET 用于 SFTP。 -->
+    <!-- 注: SSH.NET 已采用日历版本号 (2025.x)，不再有 16.x 分支；2025.1.0 支持 net8.0。 -->
+    <PackageVersion Include="SSH.NET" Version="2025.1.0" />
+
+    <!-- ADR-0039 §8: Ed25519 签名校验 (BouncyCastle 提供 Ed25519 支持, .NET 8 BCL 不含)。
+         版本 >= 2.6.2 以满足 SSH.NET 2025.1.0 的传递依赖 (NU1109)。 -->
+    <PackageVersion Include="BouncyCastle.Cryptography" Version="2.6.2" />
+
+    <!-- ADR-0031 §5-9: M3+ 可观测性栈 (Serilog + OpenTelemetry)。 -->
+    <!-- Serilog 结构化日志: 核心 + Hosting 集成 + 文件/控制台 sink。 -->
+    <PackageVersion Include="Serilog" Version="4.0.0" />
+    <PackageVersion Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+    <PackageVersion Include="Serilog.Sinks.File" Version="6.0.0" />
+    <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <!-- OpenTelemetry: traces + metrics + OTLP exporter + 运行时指标。
+         (1.10.0 有 GHSA-4625-4j76-fww9 漏洞, 升级到 1.11.2; Runtime 1.11.0 为该包最新稳定版。) -->
+    <PackageVersion Include="OpenTelemetry" Version="1.11.2" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.11.2" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.11.2" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.11.0" />
+
+    <!-- ADR-0030 §8: 长期 SQLite/FTS5 文件索引 (含 Microsoft.Data.Sqlite)。
+         9.0.0 与已引用的 Microsoft.Extensions.* 9.0.0 一致。 -->
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="9.0.0" />
+  </ItemGroup>
+
+</Project>

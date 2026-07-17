@@ -1,0 +1,15 @@
+# math.osh — 数学工具模块（ADR-0056 export 示例）
+# 导出常量与函数，供命名导入测试使用。
+export const PI = 3.14159265358979
+
+export fn add(a: int, b: int) -> int {
+  $a + $b
+}
+
+export fn multiply(a: int, b: int) -> int {
+  $a * $b
+}
+
+export fn square(n: int) -> int {
+  $n * $n
+}

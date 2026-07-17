@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>OpenShell.Providers.Archive</RootNamespace>
+    <AssemblyName>OpenShell.Providers.Archive</AssemblyName>
+    <IsPackable>true</IsPackable>
+    <PackageId>OpenShell.Providers.Archive</PackageId>
+    <Description>Zip archive provider for OpenShell.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpenShell.Core\OpenShell.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,8 @@
+# cd_navigation.osh — cd 导航测试脚本
+# 验证 cd .. 路径规范化、cd subdir、cd ../sibling 等导航场景。
+# 输出：每步 pwd 结果到 stdout，供测试断言。
+mkdir NavigationTest
+cd NavigationTest
+pwd
+cd ..
+pwd

@@ -1,0 +1,60 @@
+name: ci
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  build-and-test:
+    name: build & test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore OpenShell.slnx
+
+      - name: Build
+        run: dotnet build OpenShell.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: >
+          dotnet test OpenShell.slnx
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=${{ matrix.os }}.trx"
+          --collect:"XPlat Code Coverage"
+          --results-directory ./TestResults
+        env:
+          # Registry Provider tests 仅在 Windows 跑；其他平台自动跳过 (per ADR-0033 §6)。
+          OPENSHELL_CI: 'true'
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: ./TestResults/**/*.trx
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.os }}
+          path: ./TestResults/**/coverage.cobertura.xml

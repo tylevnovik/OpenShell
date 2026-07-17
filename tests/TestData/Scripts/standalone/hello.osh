@@ -1,0 +1,6 @@
+# hello.osh — 简单端到端脚本
+# 验证基本赋值、算术、字符串插值。
+$name = "World"
+$greeting = "Hello, $($name)!"
+$sum = 1 + 2 + 3
+$greeting

@@ -1,0 +1,86 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Style Selector="Button.ToolBarButton">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundChromeHighBrush}" />
+    <Style Selector="^:pointerover">
+      <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAltListLowBrush}" />
+    </Style>
+    <Style Selector="^:pressed">
+      <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAltListLowBrush}" />
+    </Style>
+  </Style>
+
+  <Style Selector="ListBox.FileList">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Style Selector="^ ListBoxItem">
+      <Setter Property="Padding" Value="8,4" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Style Selector="^:selected /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAltListLowBrush}" />
+      </Style>
+      <Style Selector="^:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAltListLowBrush}" />
+      </Style>
+    </Style>
+  </Style>
+
+  <Style Selector="Button.BreadcrumbButton">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="6,4" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+    <Style Selector="^:pointerover">
+      <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAltListLowBrush}" />
+    </Style>
+  </Style>
+
+  <Style Selector="Border.StatusBar">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+    <Setter Property="Padding" Value="8,4" />
+  </Style>
+
+  <Style Selector="TextBox.SearchBox">
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Watermark" Value="搜索..." />
+  </Style>
+
+  <Style Selector="GridSplitter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Width" Value="4" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Style Selector="^:pointerover">
+      <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAltListLowBrush}" />
+    </Style>
+  </Style>
+
+  <Style Selector="TreeView.NavigationTree">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Style Selector="^ TreeViewItem">
+      <Setter Property="Padding" Value="4,2" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Style Selector="^:selected /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAltListLowBrush}" />
+      </Style>
+      <Style Selector="^:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAltListLowBrush}" />
+      </Style>
+    </Style>
+  </Style>
+
+</Styles>

@@ -1,0 +1,42 @@
+<Project>
+
+  <PropertyGroup>
+    <Product>OpenShell</Product>
+    <Authors>OpenShell</Authors>
+    <Copyright>Copyright (c) 2026 OpenShell</Copyright>
+    <Version>0.1.0-alpha</Version>
+
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors>nullable</WarningsAsErrors>
+
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+
+    <!-- ADR-0031: OpenTelemetry.Exporter.OpenTelemetryProtocol GHSA-4625-4j76-fww9 (CVE-2026-42191)
+         影响 <= 1.15.2, 仅在 OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY=disk (非默认) 时可利用。
+         OpenShell 不启用 disk retry, 故抑制 NU1902 直到 1.15.3 + 全套包可用。 -->
+    <NoWarn>$(NoWarn);NU1902</NoWarn>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1902</WarningsNotAsErrors>
+
+    <RepoRoot>$(MSBuildThisFileDirectory)</RepoRoot>
+    <ArtifactsPath>$(RepoRoot)artifacts</ArtifactsPath>
+  </PropertyGroup>
+
+  <!-- ADR-0033: 覆盖率配置 (Cobertura 格式，测试项目统一使用)。 -->
+  <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
+    <CoverletOutputFormat>cobertura</CoverletOutputFormat>
+    <CoverletOutput>./TestResults/</CoverletOutput>
+    <!-- 测试项目通过 NSubstitute 间接引入 Castle.Core, 触发 NU1603 transitive dependency warning。
+         TreatWarningsAsErrors 会将其视为错误，这里显式抑制并标记为不视为错误。 -->
+    <NoWarn>$(NoWarn);NU1603</NoWarn>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1603</WarningsNotAsErrors>
+  </PropertyGroup>
+
+</Project>

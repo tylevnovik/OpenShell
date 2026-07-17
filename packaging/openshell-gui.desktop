@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=OpenShell
+Comment=Cross-platform shell and file manager
+Exec=/opt/openshell/openshell-gui %F
+Icon=openshell
+Categories=System;FileManager;
+Terminal=false
+MimeType=inode/directory;

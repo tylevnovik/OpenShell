@@ -1,0 +1,6 @@
+# main.osh — 多文件项目主脚本
+# import strings.osh，调用导出函数。
+import { upper } from "../modules/strings.osh"
+
+$label = upper("result")
+$label

@@ -1,0 +1,23 @@
+# control_flow.osh — 控制流综合脚本
+# 验证 if/while/for-in/try-catch。
+$sum = 0
+for $i in 1..10 {
+  if $i % 2 == 0 {
+    $sum = $sum + $i
+  }
+}
+
+$factorial = 1
+$n = 5
+while $n > 0 {
+  $factorial = $factorial * $n
+  $n = $n - 1
+}
+
+try {
+  $result = 10 / 2
+} catch {
+  $result = 0
+}
+
+$sum

@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="OpenShell.Gui.Host.Views.DetailsPane"
+             x:CompileBindings="False">
+  <ScrollViewer>
+    <Grid Margin="8">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
+      <TextBlock Grid.Row="0" Grid.Column="0" Text="名称:" Margin="0,0,8,4"/>
+      <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ActivePane.SelectedItems[0].Name}" Margin="0,0,0,4"/>
+      <TextBlock Grid.Row="1" Grid.Column="0" Text="路径:" Margin="0,0,8,4"/>
+      <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ActivePane.SelectedItems[0].Path.Display}" Margin="0,0,0,4"/>
+      <TextBlock Grid.Row="2" Grid.Column="0" Text="大小:" Margin="0,0,8,4"/>
+      <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ActivePane.SelectedItems[0].Length}" Margin="0,0,0,4"/>
+      <TextBlock Grid.Row="3" Grid.Column="0" Text="类型:" Margin="0,0,8,4"/>
+      <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding ActivePane.SelectedItems[0].ContentType}" Margin="0,0,0,4"/>
+      <TextBlock Grid.Row="4" Grid.Column="0" Text="修改时间:" Margin="0,0,8,4"/>
+      <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ActivePane.SelectedItems[0].ModifiedTime}" Margin="0,0,0,4"/>
+      <TextBlock Grid.Row="5" Grid.Column="0" Text="创建时间:" Margin="0,0,8,0"/>
+      <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding ActivePane.SelectedItems[0].CreatedTime}"/>
+    </Grid>
+  </ScrollViewer>
+</UserControl>

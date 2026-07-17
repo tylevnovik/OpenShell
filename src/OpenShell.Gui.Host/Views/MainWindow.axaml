@@ -1,0 +1,158 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:OpenShell.Gui.Host.Views"
+        xmlns:conv="clr-namespace:OpenShell.Gui.Host.Converters"
+        x:Class="OpenShell.Gui.Host.Views.MainWindow"
+        x:Name="Root"
+        x:CompileBindings="False"
+        Title="gui.title"
+        Width="1200"
+        Height="800"
+        MinWidth="800"
+        MinHeight="500"
+        KeyDown="OnWindowKeyDown"
+        KeyUp="OnWindowKeyUp"
+        Closing="OnWindowClosing"
+        Closed="OnWindowClosed">
+  <Window.Resources>
+    <conv:ConsoleEntryKindToBrushConverter x:Key="ConsoleEntryBrush"/>
+  </Window.Resources>
+  <DockPanel>
+    <Menu x:Name="MainMenu"
+          DockPanel.Dock="Top"
+          IsVisible="False">
+      <!-- MenuVisible binding applied in code-behind when DataContext is set -->
+      <MenuItem Header="gui.menu.file" Tag="gui.menu.file">
+        <MenuItem Header="gui.menu.openConsole" Command="{Binding ToggleConsoleCommand}" />
+        <MenuItem Header="gui.menu.newWindow" />
+        <Separator />
+        <MenuItem Header="gui.menu.newTab" InputGesture="Ctrl+T" Command="{Binding NewTabCommand}" />
+        <MenuItem Header="gui.menu.closeTab" InputGesture="Ctrl+W" Command="{Binding CloseTabCommand}" />
+        <Separator />
+        <MenuItem Header="gui.menu.exit" InputGesture="Alt+F4" Click="OnExitClicked" />
+      </MenuItem>
+      <MenuItem Header="gui.menu.edit" Tag="gui.menu.edit">
+        <MenuItem Header="gui.ctx.copy" InputGesture="Ctrl+C" Command="{Binding CopyCommand}" Tag="gui.ctx.copy"/>
+        <MenuItem Header="gui.ctx.move" InputGesture="Ctrl+M" Command="{Binding MoveCommand}" Tag="gui.ctx.move"/>
+        <MenuItem Header="gui.ctx.delete" InputGesture="Delete" Command="{Binding DeleteCommand}" Tag="gui.ctx.delete"/>
+        <MenuItem Header="gui.ctx.rename" InputGesture="F2" Command="{Binding RenameCommand}" Tag="gui.ctx.rename"/>
+      </MenuItem>
+      <MenuItem Header="gui.menu.view" Tag="gui.menu.view">
+        <MenuItem Header="gui.menu.theme" Tag="gui.menu.theme">
+          <MenuItem Header="gui.theme.light" Tag="gui.theme.light" Click="OnThemeClicked" />
+          <MenuItem Header="gui.theme.dark" Tag="gui.theme.dark" Click="OnThemeClicked" />
+          <MenuItem Header="gui.theme.system" Tag="gui.theme.system" Click="OnThemeClicked" />
+        </MenuItem>
+        <MenuItem Header="gui.menu.viewMode" Tag="gui.menu.viewMode">
+          <MenuItem Header="gui.viewMode.details" Tag="gui.viewMode.details" />
+          <MenuItem Header="gui.viewMode.icons" Tag="gui.viewMode.icons" />
+          <MenuItem Header="gui.viewMode.tiles" Tag="gui.viewMode.tiles" />
+          <MenuItem Header="gui.viewMode.list" Tag="gui.viewMode.list" />
+        </MenuItem>
+        <Separator />
+        <MenuItem Header="gui.menu.showConsole" Command="{Binding ToggleConsoleCommand}" />
+        <MenuItem Header="gui.menu.commandPalette" InputGesture="Ctrl+Shift+P" Click="OnCommandPaletteClicked" />
+        <MenuItem Header="gui.menu.detailsPane" Click="OnToggleDetailsPane" />
+        <MenuItem Header="gui.menu.previewPane" Click="OnTogglePreviewPane" />
+      </MenuItem>
+      <MenuItem Header="gui.menu.help" Tag="gui.menu.help">
+        <MenuItem Header="gui.menu.about" InputGesture="F1" Click="OnAboutClicked" />
+      </MenuItem>
+    </Menu>
+
+    <views:ToolBar DockPanel.Dock="Top" x:Name="ToolBarControl"/>
+
+    <DockPanel DockPanel.Dock="Top" x:Name="TabStripDockPanel" Background="Transparent">
+      <ItemsControl x:Name="TabStripItems" ItemsSource="{Binding Tabs}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Orientation="Horizontal"/>
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <StackPanel Orientation="Horizontal" Background="Transparent" Margin="2,0">
+              <Button Content="{Binding Title}" Background="Transparent" BorderThickness="0"
+                      Click="OnTabButtonClick" Tag="{Binding}" Padding="8,4"/>
+              <Button Content="x" Width="16" Height="16" Padding="0" Margin="2,0,4,0"
+                      Background="Transparent" BorderThickness="0" FontSize="10" VerticalAlignment="Center"
+                      Click="OnTabCloseButtonClick" Tag="{Binding}"/>
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </DockPanel>
+
+    <views:StatusBar DockPanel.Dock="Bottom" x:Name="StatusBarControl"/>
+
+    <Border DockPanel.Dock="Bottom" x:Name="ErrorPanelBorder" IsVisible="{Binding IsErrorPanelVisible}" Background="#2A1A1A" MaxHeight="150">
+      <DockPanel>
+        <TextBlock Text="gui.errors.title" Foreground="#FF6060" Margin="4,2" DockPanel.Dock="Top"/>
+        <ListBox x:Name="ErrorListBox" ItemsSource="{Binding Errors}" Background="Transparent" BorderThickness="0">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding Message}" Foreground="#FF8080"/>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" x:Name="ConsolePanelBorder" IsVisible="{Binding IsConsoleVisible}" Background="#1E1E1E" MinHeight="100">
+      <DockPanel>
+        <GridSplitter DockPanel.Dock="Top" Height="4" HorizontalAlignment="Stretch"
+                      Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                      ResizeDirection="Rows"/>
+        <TextBlock Text="gui.console.title" Foreground="Gray" Margin="4,2" DockPanel.Dock="Top"/>
+        <DockPanel DockPanel.Dock="Bottom" Margin="4,2">
+          <TextBlock Text="> " Foreground="#608060" VerticalAlignment="Center" Margin="0,0,4,0"/>
+          <TextBox Text="{Binding CommandInput}" Watermark="gui.console.inputHint"
+                   Background="Transparent" Foreground="White" BorderThickness="0"
+                   x:Name="ConsoleInputBox"/>
+        </DockPanel>
+        <ListBox x:Name="ConsoleOutputList" ItemsSource="{Binding ConsoleOutputLines}"
+                 Background="Transparent" Foreground="LightGray" BorderThickness="0">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding Text}" Foreground="{Binding Kind, Converter={StaticResource ConsoleEntryBrush}}"/>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Border>
+
+    <Grid>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="200" MinWidth="150" />
+        <ColumnDefinition Width="Auto" />
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+        <ColumnDefinition Width="250" MinWidth="100" />
+      </Grid.ColumnDefinitions>
+
+      <views:NavigationPane Grid.Column="0" x:Name="NavPaneControl"/>
+
+      <GridSplitter Grid.Column="1"
+                    Width="4"
+                    ResizeDirection="Columns"
+                    Background="Transparent"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch" />
+
+      <Grid Grid.Column="2">
+        <views:FileListView x:Name="MainFileListView"/>
+      </Grid>
+
+      <GridSplitter Grid.Column="3"
+                    Width="4"
+                    ResizeDirection="Columns"
+                    Background="Transparent"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch" />
+
+      <views:DetailsPane Grid.Column="4"
+                         x:Name="DetailsPaneControl"
+                         IsVisible="{Binding IsDetailsPaneVisible}" />
+    </Grid>
+  </DockPanel>
+</Window>

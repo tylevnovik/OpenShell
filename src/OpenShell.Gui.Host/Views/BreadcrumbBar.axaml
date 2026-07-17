@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="OpenShell.Gui.Host.Views.BreadcrumbBar"
+             x:CompileBindings="False">
+  <Grid>
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                  IsVisible="{Binding !ActivePane.IsAddressEditing}">
+      <ItemsControl ItemsSource="{Binding ActivePane.BreadcrumbSegments}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <StackPanel Orientation="Horizontal">
+              <Button Content="{Binding Label}" Command="{Binding $parent[UserControl].DataContext.ActivePane.NavigateCommand}"
+                      CommandParameter="{Binding Path}" Classes="BreadcrumbButton" Background="Transparent" BorderThickness="0"/>
+              <TextBlock Text="&#x203A;" Margin="2,0" VerticalAlignment="Center" Opacity="0.6"/>
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+    <TextBox Text="{Binding ActivePane.AddressText}" IsVisible="{Binding ActivePane.IsAddressEditing}"
+             Margin="2" HorizontalAlignment="Stretch" x:Name="AddressTextBox"/>
+    <TextBox IsVisible="False" x:Name="HiddenTextBox1"/>
+    <TextBox IsVisible="False" x:Name="HiddenTextBox2"/>
+  </Grid>
+</UserControl>

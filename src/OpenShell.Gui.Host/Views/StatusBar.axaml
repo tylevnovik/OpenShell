@@ -1,0 +1,29 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="OpenShell.Gui.Host.Views.StatusBar"
+             x:CompileBindings="False">
+  <Border x:Name="PART_Border" Classes="StatusBar" Padding="8,2" Background="LightGray">
+    <Grid>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+      <StackPanel Grid.Column="0" Orientation="Horizontal">
+        <TextBlock x:Name="ItemsLabel" Text="gui.status.items"/>
+        <TextBlock Text="{Binding ActivePane.ItemCount}" Margin="4,0,8,0"/>
+        <TextBlock Text="gui.status.selected"/>
+        <TextBlock Text="{Binding ActivePane.SelectedCount}" Margin="4,0,0,0"/>
+      </StackPanel>
+      <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" Margin="8,0"/>
+      <TextBlock Grid.Column="2" Text="{Binding Statusbar.TasksLabel}" Margin="8,0"/>
+      <Button Grid.Column="3" Command="{Binding ShowErrorsCommand}" Margin="8,0,0,0">
+        <StackPanel Orientation="Horizontal">
+          <TextBlock Text="gui.status.errors"/>
+          <TextBlock Text="{Binding ErrorCount}"/>
+        </StackPanel>
+      </Button>
+    </Grid>
+  </Border>
+</UserControl>

@@ -1,0 +1,23 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OpenShell.Cli.Host/OpenShell.Cli.Host.csproj" />
+    <Project Path="src/OpenShell.Core/OpenShell.Core.csproj" />
+    <Project Path="src/OpenShell.Gui.Host/OpenShell.Gui.Host.csproj" />
+    <Project Path="src/OpenShell.Providers.Archive/OpenShell.Providers.Archive.csproj" />
+    <Project Path="src/OpenShell.Providers.FileSystem/OpenShell.Providers.FileSystem.csproj" />
+    <Project Path="src/OpenShell.Providers.Registry/OpenShell.Providers.Registry.csproj" />
+    <Project Path="src/OpenShell.Providers.Remote/OpenShell.Providers.Remote.csproj" />
+    <Project Path="src/OpenShell.Providers.Variables/OpenShell.Providers.Variables.csproj" />
+    <Project Path="src/OpenShell.Updater/OpenShell.Updater.csproj" />
+    <Project Path="src/OpenShell.DotnetTool/OpenShell.DotnetTool.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OpenShell.TestUtils/OpenShell.TestUtils.csproj" />
+    <Project Path="tests/OpenShell.Core.Tests/OpenShell.Core.Tests.csproj" />
+    <Project Path="tests/OpenShell.Providers.FileSystem.Tests/OpenShell.Providers.FileSystem.Tests.csproj" />
+    <Project Path="tests/OpenShell.Providers.Remote.Tests/OpenShell.Providers.Remote.Tests.csproj" />
+    <Project Path="tests/OpenShell.IntegrationTests/OpenShell.IntegrationTests.csproj" />
+    <Project Path="tests/OpenShell.Gui.Host.Tests/OpenShell.Gui.Host.Tests.csproj" />
+    <Project Path="tests/OpenShell.Benchmarks/OpenShell.Benchmarks.csproj" />
+  </Folder>
+</Solution>

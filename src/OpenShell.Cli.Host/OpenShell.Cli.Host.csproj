@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>OpenShell.Cli.Host</RootNamespace>
+    <AssemblyName>openshell-cli</AssemblyName>
+    <RollForward>LatestMinor</RollForward>
+    <!-- ADR-0032 §2: 单文件自包含发布。dotnet publish 时生效。 -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+
+    <!-- 共享应用输出目录：与 Gui.Host 共用 artifacts/bin/OpenShell/{cfg}/，
+         避免共享依赖（OpenShell.Core.dll、Serilog/Tomlyn/OpenTelemetry、运行时 dll）
+         在磁盘上散布多份副本。obj 仍按项目名分目录，互不干扰。 -->
+    <BaseOutputPath>$(RepoRoot)artifacts\bin\OpenShell\</BaseOutputPath>
+    <OutputPath>$(BaseOutputPath)$(Configuration)\</OutputPath>
+    <OutDir>$(OutputPath)</OutDir>
+    <!-- 并行构建时两个入口同时拷同一份共享依赖 dll 会撞文件锁（MSB3026）。
+         hardlinks 减少从 nuget 缓存拷贝的 IO 量；撞锁时快速重试通常即可恢复。 -->
+    <CreateHardLinksForCopyAdditionalFilesIfPossible>true</CreateHardLinksForCopyAdditionalFilesIfPossible>
+    <CreateHardLinksForCopyLocalIfPossible>true</CreateHardLinksForCopyLocalIfPossible>
+    <CopyRetryCount>10</CopyRetryCount>
+    <CopyRetryDelayMilliseconds>50</CopyRetryDelayMilliseconds>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpenShell.Core\OpenShell.Core.csproj" />
+    <ProjectReference Include="..\OpenShell.Providers.FileSystem\OpenShell.Providers.FileSystem.csproj" />
+    <ProjectReference Include="..\OpenShell.Providers.Archive\OpenShell.Providers.Archive.csproj" />
+    <ProjectReference Include="..\OpenShell.Providers.Registry\OpenShell.Providers.Registry.csproj" />
+    <ProjectReference Include="..\OpenShell.Providers.Remote\OpenShell.Providers.Remote.csproj" />
+    <ProjectReference Include="..\OpenShell.Providers.Variables\OpenShell.Providers.Variables.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+    <PackageReference Include="System.Reactive" />
+  </ItemGroup>
+
+</Project>

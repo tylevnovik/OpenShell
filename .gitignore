@@ -1,0 +1,35 @@
+# .NET build and test output
+/artifacts/
+/publish/
+**/bin/
+**/obj/
+**/TestResults/
+
+# IDE and user-specific state
+/.vs/
+/.idea/
+/.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Package output
+*.nupkg
+*.snupkg
+
+# Runtime logs captured during local smoke tests
+/gui_err.txt
+/gui_out.txt
+/loopback_err.txt
+/loopback_out.txt
+/raw_err.txt
+/raw_out.txt
+/raw2_err.txt
+/raw2_out.txt
+*.log
+
+# OS metadata
+.DS_Store
+Thumbs.db
+Desktop.ini

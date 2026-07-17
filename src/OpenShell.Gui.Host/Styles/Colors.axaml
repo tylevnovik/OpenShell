@@ -1,0 +1,21 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumBrush" Color="#FFEFEFEF" />
+      <SolidColorBrush x:Key="SystemControlForegroundBaseHighBrush" Color="#FF000000" />
+      <SolidColorBrush x:Key="SystemControlForegroundBaseMediumBrush" Color="#FF5A5A5A" />
+      <SolidColorBrush x:Key="SystemControlForegroundChromeHighBrush" Color="#FF000000" />
+      <SolidColorBrush x:Key="SystemControlHighlightAltListLowBrush" Color="#FFE5F1FB" />
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Dark">
+      <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#FF202020" />
+      <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumBrush" Color="#FF2D2D2D" />
+      <SolidColorBrush x:Key="SystemControlForegroundBaseHighBrush" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="SystemControlForegroundBaseMediumBrush" Color="#FF9A9A9A" />
+      <SolidColorBrush x:Key="SystemControlForegroundChromeHighBrush" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="SystemControlHighlightAltListLowBrush" Color="#FF2B4A66" />
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>

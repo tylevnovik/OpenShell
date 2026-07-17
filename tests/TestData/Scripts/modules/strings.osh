@@ -1,0 +1,15 @@
+# strings.osh — 字符串工具模块
+# 导出默认值与函数，供命名空间导入 + 默认导入测试使用。
+export default "hello from strings module"
+
+export fn upper(s) {
+  $s.ToUpper()
+}
+
+export fn repeat(s, n: int) {
+  $result = ""
+  for $i in 1..$n {
+    $result = $result + $s
+  }
+  $result
+}

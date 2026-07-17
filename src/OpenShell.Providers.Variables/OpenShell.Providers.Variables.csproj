@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>OpenShell.Providers.Variables</RootNamespace>
+    <AssemblyName>OpenShell.Providers.Variables</AssemblyName>
+    <IsPackable>true</IsPackable>
+    <PackageId>OpenShell.Providers.Variables</PackageId>
+    <Description>Built-in virtual drive providers (Variable / Env / Function) for OpenShell.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpenShell.Core\OpenShell.Core.csproj" />
+  </ItemGroup>
+
+</Project>

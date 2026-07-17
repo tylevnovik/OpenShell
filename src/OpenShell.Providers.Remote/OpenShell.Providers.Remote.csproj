@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>OpenShell.Providers.Remote</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <PackageId>OpenShell.Providers.Remote</PackageId>
+    <Description>Remote providers (SFTP) for OpenShell.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpenShell.Core\OpenShell.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SSH.NET" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 暴露 internal 静态方法 (ParseInternalPath / TryParseInternalPath) 给测试项目, 用于 ADR-0019 §2 路径解析单测。 -->
+    <InternalsVisibleTo Include="OpenShell.Providers.Remote.Tests" />
+  </ItemGroup>
+
+</Project>

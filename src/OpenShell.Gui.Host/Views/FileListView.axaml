@@ -1,0 +1,61 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:OpenShell.Gui.Host.Converters"
+             x:Class="OpenShell.Gui.Host.Views.FileListView"
+             x:CompileBindings="False">
+  <UserControl.Resources>
+    <conv:FileSizeConverter x:Key="SizeConverter"/>
+    <conv:ItemTypeConverter x:Key="TypeConverter"/>
+    <conv:ItemIconConverter x:Key="IconConverter"/>
+  </UserControl.Resources>
+  <DockPanel>
+    <Grid DockPanel.Dock="Top" x:Name="HeaderGrid" ColumnDefinitions="24,*,Auto,Auto,Auto">
+      <GridSplitter Grid.Column="0" Width="0" IsHitTestVisible="False"/>
+      <Button Grid.Column="1" Content="gui.list.name" Command="{Binding Pane.SortCommand}" CommandParameter="Name" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"/>
+      <Button Grid.Column="2" Content="gui.list.size" Command="{Binding Pane.SortCommand}" CommandParameter="Size" Width="120" HorizontalContentAlignment="Left"/>
+      <Button Grid.Column="3" Content="gui.list.type" Command="{Binding Pane.SortCommand}" CommandParameter="Type" Width="120" HorizontalContentAlignment="Left"/>
+      <Button Grid.Column="4" Content="gui.list.modified" Command="{Binding Pane.SortCommand}" CommandParameter="Modified" Width="180" HorizontalContentAlignment="Left"/>
+      <GridSplitter Grid.Column="1" Width="4" Background="Transparent" ResizeBehavior="PreviousAndNext"/>
+    </Grid>
+    <ProgressBar IsVisible="{Binding Pane.IsLoading}" IsIndeterminate="True" Height="2" DockPanel.Dock="Top"/>
+    <Border IsVisible="{Binding Pane.ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}" Background="#50FF0000" Padding="8" DockPanel.Dock="Top">
+      <TextBlock Text="{Binding Pane.ErrorMessage}" Foreground="Red"/>
+    </Border>
+    <ListBox ItemsSource="{Binding Pane.Items}" SelectionMode="Multiple"
+             DoubleTapped="OnFileDoubleTapped" ContextRequested="OnContextRequested" x:Name="InnerFileList">
+      <ListBox.ItemTemplate>
+        <DataTemplate>
+          <Grid ColumnDefinitions="20,*,120,120,180">
+            <ContentControl Grid.Column="0" Content="{Binding Converter={StaticResource IconConverter}}" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" Margin="4,0"/>
+            <TextBlock Grid.Column="2" Text="{Binding Length, Converter={StaticResource SizeConverter}}" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="3" Text="{Binding ContentType, Converter={StaticResource TypeConverter}}" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="4" Text="{Binding ModifiedTime}" VerticalAlignment="Center"/>
+          </Grid>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+      <ListBox.ContextMenu>
+        <ContextMenu>
+          <MenuItem Header="gui.ctx.open" Tag="gui.ctx.open" Command="{Binding Pane.OpenCommand}" CommandParameter="{Binding SelectedItem, ElementName=InnerFileList}"/>
+          <MenuItem Header="gui.ctx.openWith" Tag="gui.ctx.openWith" Command="{Binding #Root.DataContext.OpenWithCommand}" CommandParameter="{Binding SelectedItem, ElementName=InnerFileList}"/>
+          <Separator/>
+          <MenuItem Header="gui.ctx.copy" Tag="gui.ctx.copy" Command="{Binding #Root.DataContext.CopyCommand}" InputGesture="Ctrl+C"/>
+          <MenuItem Header="gui.ctx.cut" Tag="gui.ctx.cut" Command="{Binding #Root.DataContext.CutCommand}" InputGesture="Ctrl+X"/>
+          <MenuItem Header="gui.ctx.paste" Tag="gui.ctx.paste" Command="{Binding #Root.DataContext.PasteCommand}" InputGesture="Ctrl+V"/>
+          <MenuItem Header="gui.ctx.copyAsPath" Tag="gui.ctx.copyAsPath" Command="{Binding #Root.DataContext.CopyAsPathCommand}"/>
+          <Separator/>
+          <MenuItem Header="gui.ctx.move" Tag="gui.ctx.move" Command="{Binding #Root.DataContext.MoveCommand}"/>
+          <MenuItem Header="gui.ctx.delete" Tag="gui.ctx.delete" Command="{Binding #Root.DataContext.DeleteCommand}" InputGesture="Delete"/>
+          <MenuItem Header="gui.ctx.rename" Tag="gui.ctx.rename" Command="{Binding #Root.DataContext.RenameCommand}" InputGesture="F2"/>
+          <Separator/>
+          <MenuItem Header="gui.ctx.selectAll" Tag="gui.ctx.selectAll" Command="{Binding #Root.DataContext.SelectAllCommand}" InputGesture="Ctrl+A"/>
+          <MenuItem Header="gui.ctx.invertSelection" Tag="gui.ctx.invertSelection" Command="{Binding #Root.DataContext.InvertSelectionCommand}"/>
+          <MenuItem Header="gui.ctx.deselectAll" Tag="gui.ctx.deselectAll" Command="{Binding #Root.DataContext.DeselectAllCommand}"/>
+          <Separator/>
+          <MenuItem Header="gui.ctx.createShortcut" Tag="gui.ctx.createShortcut" Command="{Binding #Root.DataContext.CreateShortcutCommand}"/>
+          <MenuItem Header="gui.ctx.properties" Tag="gui.ctx.properties" Command="{Binding #Root.DataContext.PropertiesCommand}" InputGesture="Alt+Enter"/>
+        </ContextMenu>
+      </ListBox.ContextMenu>
+    </ListBox>
+  </DockPanel>
+</UserControl>
