@@ -25,7 +25,7 @@ public sealed class ProjectStabilityComplianceTests
         bus.Publish(new TestEvent());
     }
 
-    [Fact(Skip = "pending T-501")]
+    [Fact]
     public void ErrorRecord_MapsArgumentException()
     {
         var record = ErrorRecord.FromException(new ArgumentOutOfRangeException("count"));

@@ -49,6 +49,7 @@ public sealed record ErrorRecord
         var category = ex switch
         {
             OpenShellException ose => ose.Category,
+            ArgumentException => ErrorCategory.InvalidArgument,
             OperationCanceledException => ErrorCategory.OperationCancelled,
             TimeoutException => ErrorCategory.OperationTimeout,
             UnauthorizedAccessException => ErrorCategory.PermissionDenied,

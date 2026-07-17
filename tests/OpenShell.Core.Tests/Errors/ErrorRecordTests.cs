@@ -83,7 +83,7 @@ public class ErrorRecordTests
         record.Category.Should().Be(ErrorCategory.Unknown);
     }
 
-    [Fact(Skip = "bug: ArgumentNullException is not mapped to InvalidArgument in ErrorRecord.FromException (falls through to Unknown)")]
+    [Fact]
     public void FromException_ArgumentNullException_MapsToInvalidArgument()
     {
         var ex = new ArgumentNullException("param");
