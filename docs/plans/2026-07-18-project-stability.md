@@ -69,7 +69,25 @@
 2. 将 CI `dotnet-version` 改为 `10.0.x`。
 3. 运行 T-505 合规测试，预期通过。
 
-### Task 5: 全量验证与烟测
+### Task 5: 修复真实 GUI 烟测回归
+
+**Files:**
+- Modify: `src/OpenShell.Gui.Host/App.cs`
+- Modify: `src/OpenShell.Gui.Host/Views/MainWindow.axaml.cs`
+- Modify: `src/OpenShell.Gui.Host/Views/MainWindow.axaml`
+- Modify: `src/OpenShell.Gui.Host/Views/ToolBar.axaml`
+- Modify: `src/OpenShell.Gui.Host/Views/FileListView.axaml`
+- Modify: `src/OpenShell.Gui.Host/Views/NavigationPane.axaml.cs`
+- Modify: `src/OpenShell.Gui.Host/Views/StatusBar.axaml`
+- Test: `tests/OpenShell.Gui.Host.Tests/ProjectStabilityGuiComplianceTests.cs`
+
+**Steps:**
+1. 建立并启用“无资源键泄漏”和“文件列表绑定活动标签页”两个 Avalonia 合规测试，确认失败。
+2. 统一翻译 XAML 字符串并修正不存在的资源键，支持 locale 变化后重复刷新。
+3. 在 `WireUpControls()` 后同步活动标签页，修复挂载顺序导致的空列表/错误条。
+4. 运行 GUI 测试项目并重新捕获真实窗口截图，预期无 `gui.*` 可见文本且文件列表有内容。
+
+### Task 6: 全量验证与烟测
 
 **Files:**
 - Modify: `docs/project-stability-audit.md`
@@ -81,4 +99,3 @@
 3. 运行真实 CLI `-Command` 和 `-File` 烟测，校验退出码与输出。
 4. 启动 GUI，确认窗口进程稳定运行且无启动异常，然后正常终止测试进程。
 5. 将 T-500~T-591 全部标记 `[x]`，在审计中记录最终计数。
-
