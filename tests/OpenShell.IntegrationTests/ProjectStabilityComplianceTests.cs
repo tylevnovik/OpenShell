@@ -33,7 +33,7 @@ public sealed class ProjectStabilityComplianceTests
         Assert.Equal(ErrorCategory.InvalidArgument, record.Category);
     }
 
-    [Fact(Skip = "pending T-502")]
+    [Fact]
     public void FilterLexer_ParsesIsoDateLiteral()
     {
         var token = new Lexer("2026-07-18T12:34:56+08:00").Next();

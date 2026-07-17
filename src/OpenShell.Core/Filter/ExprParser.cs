@@ -33,7 +33,11 @@ public sealed class Lexer
 
         // 2. 数字字面量（含 0x / 0b / KB/MB/GB/TB 单位）
         if (char.IsDigit(ch))
+        {
+            if (TryLexDate(start, out var dateToken))
+                return dateToken;
             return LexNumber(start);
+        }
 
         // 3. 负号开头：可能是负数，也可能是 -and/-or/-not
         if (ch == '-' && _pos + 1 < _source.Length && char.IsDigit(_source[_pos + 1]))
@@ -181,6 +185,45 @@ public sealed class Lexer
         return new(TokenKind.Number, sb.ToString(), lv, start);
     }
 
+    /// <summary>尝试读取数字开头的 ISO 日期或日期时间字面量。</summary>
+    private bool TryLexDate(int start, out Token token)
+    {
+        token = default;
+        if (_source.Length - start < 10
+            || !char.IsDigit(_source[start])
+            || !char.IsDigit(_source[start + 1])
+            || !char.IsDigit(_source[start + 2])
+            || !char.IsDigit(_source[start + 3])
+            || _source[start + 4] != '-'
+            || !char.IsDigit(_source[start + 5])
+            || !char.IsDigit(_source[start + 6])
+            || _source[start + 7] != '-'
+            || !char.IsDigit(_source[start + 8])
+            || !char.IsDigit(_source[start + 9]))
+        {
+            return false;
+        }
+
+        var end = start + 10;
+        if (end < _source.Length && (_source[end] == 'T' || _source[end] == 't'))
+        {
+            end++;
+            while (end < _source.Length && IsDateTimeContinuation(_source[end]))
+                end++;
+        }
+
+        if (end < _source.Length && (char.IsLetterOrDigit(_source[end]) || _source[end] == '_'))
+            return false;
+
+        var text = _source[start..end];
+        if (!TryReadDate(text, out var date))
+            return false;
+
+        _pos = end;
+        token = new Token(TokenKind.Date, text, date, start);
+        return true;
+    }
+
     /// <summary>尝试读取数字单位（KB/MB/GB/TB）。返回乘数，未读到返回 null。</summary>
     private long? TryReadUnit(out string text)
     {
@@ -221,10 +264,6 @@ public sealed class Lexer
             _pos++;
         }
         var name = sb.ToString();
-
-        // 尝试作为日期字面量（YYYY-MM-DD 或 YYYY-MM-DDTHH:MM:SS...）
-        if (TryReadDate(name, out var date))
-            return new(TokenKind.Date, name, date, start);
 
         var lower = name.ToLowerInvariant();
         var kind = lower switch
@@ -333,6 +372,9 @@ public sealed class Lexer
 
     private static bool IsHexDigit(char ch) =>
         char.IsDigit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F');
+
+    private static bool IsDateTimeContinuation(char ch) =>
+        char.IsDigit(ch) || ch is ':' or '.' or '+' or '-' or 'Z' or 'z';
 }
 
 /// <summary>Token 类型。Per ADR-0012 §2.</summary>

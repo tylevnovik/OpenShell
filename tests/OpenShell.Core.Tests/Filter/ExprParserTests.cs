@@ -263,10 +263,7 @@ public class ExprParserTests
         cmp.Right.Value.Should().Be("plain");
     }
 
-    // TODO: bug — ExprParser.LexIdentifier 仅对标识符起始的 token 调 TryReadDate，
-    //   但 '2026-01-01' 以数字开头走 LexNumber，- 被当作减号运算符，日期字面量无法解析。
-    //   需在 Lexer 主分发中对数字后跟 -数字-数字 模式尝试日期识别。源码未修，跳过。
-    [Fact(Skip = "bug: date literal lexer does not handle digit-leading dates (YYYY-MM-DD)")]
+    [Fact]
     public void Parse_DateLiteral_ReturnsDateTimeOffset()
     {
         var ast = ExprParser.Parse("modified = 2026-01-01");
