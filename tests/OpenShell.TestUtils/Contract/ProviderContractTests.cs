@@ -83,7 +83,7 @@ public abstract class ProviderContractTests<TProvider> where TProvider : class, 
     public virtual async Task AllAsyncMethods_AcceptCancellation()
     {
         var p = CreateProvider();
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         cts.Cancel();
 
         foreach (var method in typeof(TProvider).GetMethods(BindingFlags.Public | BindingFlags.Instance))
@@ -100,56 +100,102 @@ public abstract class ProviderContractTests<TProvider> where TProvider : class, 
             // 跳过 InitialiseAsync（默认实现不抛取消异常）。
             if (method.Name == nameof(IProvider.InitialiseAsync)) continue;
 
-            // 构造参数：CancellationToken 用已取消，其他用 default。
+            // 使用 Provider 自己的测试根路径构造安全且有效的参数，避免参数校验掩盖取消语义。
             var args = method.GetParameters()
-                .Select(pi => pi.ParameterType == typeof(CancellationToken)
-                    ? (object)cts.Token
-                    : GetTypeDefault(pi.ParameterType))
+                .Select(pi => GetCancellationTestArgument(method, pi, cts.Token))
                 .ToArray();
 
+            var cancelled = false;
             try
             {
                 var result = method.Invoke(p, args);
-                if (result is Task t)
-                {
-                    await t;
-                }
-                else if (result is ValueTask vt)
-                {
-                    await vt;
-                }
-                else if (result != null && result.GetType().IsGenericType)
-                {
-                    var gt = result.GetType().GetGenericTypeDefinition();
-                    if (gt == typeof(Task<>) || gt == typeof(ValueTask<>))
-                    {
-                        var awaiter = result.GetType().GetMethod("GetAwaiter")!.Invoke(result, null);
-                        var getResult = awaiter!.GetType().GetMethod("GetResult");
-                        getResult?.Invoke(awaiter, null);
-                    }
-                    else if (gt == typeof(IAsyncEnumerable<>))
-                    {
-                        // 触发迭代以触发 cancellation。
-                        var enumerator = result.GetType().GetMethod("GetAsyncEnumerator")!.Invoke(result, new object?[] { cts.Token });
-                        var moveNext = enumerator!.GetType().GetMethod("MoveNextAsync");
-                        if (moveNext != null)
-                        {
-                            dynamic vt2 = moveNext.Invoke(enumerator, null)!;
-                            await ((ValueTask<bool>)vt2);
-                        }
-                    }
-                }
+                await AwaitAsyncResult(result, returnType, cts.Token);
             }
             catch (TargetInvocationException tie) when (tie.InnerException is OperationCanceledException)
             {
-                // expected（反射调用包装的异常）。
+                cancelled = true;
             }
             catch (OperationCanceledException)
             {
-                // expected (包括 TaskCanceledException, 其派生自 OperationCanceledException)
+                cancelled = true;
             }
-            // 其他异常视为契约违反（provider 没正确处理取消）。
+
+            Assert.True(cancelled,
+                $"{typeof(TProvider).Name}.{method.Name} did not honor a pre-cancelled CancellationToken.");
         }
+    }
+
+    /// <summary>为取消合约反射调用构造无外部副作用的有效参数。</summary>
+    protected virtual object? GetCancellationTestArgument(
+        MethodInfo method,
+        ParameterInfo parameter,
+        CancellationToken cancellationToken)
+    {
+        var parameterType = parameter.ParameterType;
+        if (parameterType == typeof(CancellationToken))
+            return cancellationToken;
+        if (parameterType == typeof(ItemPath))
+            return GetTestRoot().Combine("__cancellation_contract__");
+        if (parameterType == typeof(IItem))
+            return Item.File(GetTestRoot().Combine("__cancellation_contract__"));
+        if (parameterType == typeof(EnumerationOptions))
+            return new EnumerationOptions();
+        if (parameterType == typeof(Stream))
+            return Stream.Null;
+        if (parameterType == typeof(string))
+            return "__cancellation_contract__";
+        if (parameterType == typeof(int))
+            return 22;
+
+        return parameterType.IsValueType ? Activator.CreateInstance(parameterType) : null;
+    }
+
+    private static async Task AwaitAsyncResult(
+        object? result,
+        Type declaredReturnType,
+        CancellationToken cancellationToken)
+    {
+        if (result is Task task)
+        {
+            await task;
+            return;
+        }
+
+        if (result is ValueTask valueTask)
+        {
+            await valueTask;
+            return;
+        }
+
+        if (!declaredReturnType.IsGenericType || result is null)
+            return;
+
+        var genericType = declaredReturnType.GetGenericTypeDefinition();
+        if (genericType == typeof(ValueTask<>))
+        {
+            var asTask = (Task)result.GetType().GetMethod(nameof(ValueTask<int>.AsTask))!
+                .Invoke(result, null)!;
+            await asTask;
+            return;
+        }
+
+        if (genericType == typeof(IAsyncEnumerable<>))
+        {
+            var itemType = declaredReturnType.GetGenericArguments()[0];
+            var consumeMethod = typeof(ProviderContractTests<TProvider>)
+                .GetMethod(nameof(ConsumeFirstAsync), BindingFlags.NonPublic | BindingFlags.Static)!
+                .MakeGenericMethod(itemType);
+            var consumeTask = (Task)consumeMethod.Invoke(null, new[] { result, cancellationToken })!;
+            await consumeTask;
+        }
+    }
+
+    private static async Task ConsumeFirstAsync<T>(
+        IAsyncEnumerable<T> items,
+        CancellationToken cancellationToken)
+    {
+        await using var enumerator = items.GetAsyncEnumerator(cancellationToken);
+        await enumerator.MoveNextAsync();
     }
 
     /// <summary>默认返回根路径 + 不存在的子路径。可重写以提供更精确的不存在路径。</summary>
@@ -174,10 +220,4 @@ public abstract class ProviderContractTests<TProvider> where TProvider : class, 
         return set;
     }
 
-    private static object? GetTypeDefault(Type t)
-    {
-        if (t.IsValueType) return Activator.CreateInstance(t);
-        if (t == typeof(string)) return null;
-        return null;
-    }
 }

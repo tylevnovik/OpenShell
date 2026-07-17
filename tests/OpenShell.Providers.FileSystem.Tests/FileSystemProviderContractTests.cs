@@ -27,17 +27,6 @@ public class FileSystemProviderContractTests : ProviderContractTests<FileSystemP
         };
     }
 
-    // 跳过基类的 AllAsyncMethods_AcceptCancellation 测试:
-    // 基类用 default(ItemPath) (InternalPath 为空) 作为参数。
-    // FileSystemProvider 的部分方法 (OpenRead/OpenWrite) 抛 ArgumentException,
-    // Delete/Rename 等方法先做存在性检查并抛 FileNotFoundException, 不检查 cancellationToken。
-    // 基类用空路径无法真正验证取消契约, 需要重构基类以传入有效路径。属于基础设施限制, 非源代码 bug。
-    [Fact(Skip = "infra: ProviderContractTests.AllAsyncMethods_AcceptCancellation uses default(ItemPath) which has empty InternalPath; FileSystemProvider methods throw ArgumentException/FileNotFoundException before checking cancellation. Base class needs to pass a valid path for proper cancellation contract verification.")]
-    public override async Task AllAsyncMethods_AcceptCancellation()
-    {
-        await Task.CompletedTask;
-    }
-
     public void Dispose()
     {
         _tempDir.Dispose();

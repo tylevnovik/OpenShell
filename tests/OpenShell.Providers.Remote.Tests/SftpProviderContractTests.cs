@@ -46,16 +46,6 @@ public class SftpProviderContractTests : ProviderContractTests<SftpProvider>, ID
         await Task.CompletedTask;
     }
 
-    // 跳过基类的 AllAsyncMethods_AcceptCancellation:
-    // 基类反射构造 default(ItemPath) 调用所有 async 方法。SftpProvider 大部分方法先 ParseInternalPath,
-    // default(ItemPath).InternalPath 是空字符串 → 抛 ArgumentException, 而非检查 cancellationToken。
-    // 此外, 即使路径合法, 没有凭据也会先抛 SftpProviderException 而非 OperationCanceledException。
-    [Fact(Skip = "infra: AllAsyncMethods_AcceptCancellation uses default(ItemPath) whose InternalPath is empty; SftpProvider throws ArgumentException before checking cancellation. Base class needs a valid sftp:: path and credentials for proper cancellation contract verification.")]
-    public override async Task AllAsyncMethods_AcceptCancellation()
-    {
-        await Task.CompletedTask;
-    }
-
     [Fact]
     public void Info_Name_IsSftp()
     {
