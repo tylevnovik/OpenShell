@@ -6,34 +6,34 @@
   <StackPanel Orientation="Vertical" Spacing="2" Margin="2">
     <DockPanel>
       <views:BreadcrumbBar DockPanel.Dock="Left"/>
-      <TextBox DockPanel.Dock="Right" Width="200" Watermark="gui.search.placeholder"
+      <TextBox DockPanel.Dock="Right" Width="200" Watermark="gui.search.watermark"
                Text="{Binding SearchText, Mode=TwoWay}" Margin="2,0,0,0"/>
     </DockPanel>
     <StackPanel Orientation="Horizontal" Spacing="2">
-      <Button Content="←" ToolTip.Tip="后退" Command="{Binding NavigateBackCommand}"
+      <Button Content="←" ToolTip.Tip="gui.tool.back" Command="{Binding NavigateBackCommand}"
               Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
-      <Button Content="→" ToolTip.Tip="前进" Command="{Binding NavigateForwardCommand}"
+      <Button Content="→" ToolTip.Tip="gui.tool.forward" Command="{Binding NavigateForwardCommand}"
               Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
-      <Button Content="↑" ToolTip.Tip="上级" Command="{Binding NavigateUpCommand}"
+      <Button Content="↑" ToolTip.Tip="gui.tool.up" Command="{Binding NavigateUpCommand}"
               Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
-      <Button Content="↻" ToolTip.Tip="刷新" Command="{Binding RefreshCommand}"
-              Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
-      <Separator Margin="4,0"/>
-      <Button Content="📁 新建" ToolTip.Tip="新建文件夹" Command="{Binding NewFolderCommand}"
+      <Button Content="↻" ToolTip.Tip="gui.tool.refresh" Command="{Binding RefreshCommand}"
               Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
       <Separator Margin="4,0"/>
-      <Button Content="📋 复制" ToolTip.Tip="复制" Command="{Binding CopyCommand}"
-              Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
-      <Button Content="✂️ 剪切" ToolTip.Tip="剪切" Command="{Binding CutCommand}"
-              Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
-      <Button Content="📋 粘贴" ToolTip.Tip="粘贴" Command="{Binding PasteCommand}"
+      <Button Content="gui.button.new" ToolTip.Tip="gui.tool.newFolder" Command="{Binding NewFolderCommand}"
               Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
       <Separator Margin="4,0"/>
-      <Button Content="➡️ 移动" ToolTip.Tip="移动" Command="{Binding MoveCommand}"
+      <Button Content="gui.button.copy" ToolTip.Tip="gui.tool.copy" Command="{Binding CopyCommand}"
               Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
-      <Button Content="✏️ 重命名" ToolTip.Tip="重命名" Command="{Binding RenameCommand}"
+      <Button Content="gui.button.cut" ToolTip.Tip="gui.tool.cut" Command="{Binding CutCommand}"
               Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
-      <Button Content="🗑️ 删除" ToolTip.Tip="删除" Command="{Binding DeleteCommand}"
+      <Button Content="gui.button.paste" ToolTip.Tip="gui.tool.paste" Command="{Binding PasteCommand}"
+              Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
+      <Separator Margin="4,0"/>
+      <Button Content="gui.button.move" ToolTip.Tip="gui.tool.move" Command="{Binding MoveCommand}"
+              Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
+      <Button Content="gui.button.rename" ToolTip.Tip="gui.tool.rename" Command="{Binding RenameCommand}"
+              Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
+      <Button Content="gui.button.delete" ToolTip.Tip="gui.tool.delete" Command="{Binding DeleteCommand}"
               Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
     </StackPanel>
   </StackPanel>

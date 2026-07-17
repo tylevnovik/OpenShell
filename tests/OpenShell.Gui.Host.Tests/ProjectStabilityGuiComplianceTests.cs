@@ -10,14 +10,14 @@ namespace OpenShell.Gui.Host.Tests;
 /// <summary>真实 GUI 烟测发现项的稳定性合规测试。</summary>
 public sealed class ProjectStabilityGuiComplianceTests
 {
-    [AvaloniaFact(Skip = "pending T-506")]
+    [AvaloniaFact]
     public void MainWindow_LocalizesVisibleResourceKeys()
     {
         using var tempDir = new TempDir();
         var i18n = new ResourceI18nService(tempDir.FullPath);
         var window = new MainWindow(i18n)
         {
-            DataContext = TestAppBuilder.CreateMainViewModel(),
+            DataContext = TestAppBuilder.CreateMainViewModel(i18n),
         };
 
         try
@@ -33,6 +33,18 @@ public sealed class ProjectStabilityGuiComplianceTests
                 .Select(item => item.Header?.ToString())
                 .ToList();
             navigationHeaders.Should().Contain(new[] { "快速访问", "此电脑", "网络" });
+
+            i18n.SetLocale("en-US");
+            TestAppBuilder.PumpDispatcher();
+
+            VisibleStrings(window).Should().NotContain(
+                value => value.StartsWith("gui.", StringComparison.Ordinal));
+            TestAppBuilder.FindDescendants<TreeViewItem>(window)
+                .Select(item => item.Header?.ToString())
+                .Should().Contain(new[] { "Quick access", "This PC", "Network" });
+            TestAppBuilder.FindDescendants<Button>(window)
+                .Select(button => button.Content?.ToString())
+                .Should().Contain("📁 New");
         }
         finally
         {
@@ -40,12 +52,12 @@ public sealed class ProjectStabilityGuiComplianceTests
         }
     }
 
-    [AvaloniaFact(Skip = "pending T-507")]
+    [AvaloniaFact]
     public void MainWindow_AttachBindsFileListToActiveBrowserTab()
     {
         using var tempDir = new TempDir();
         var i18n = new ResourceI18nService(tempDir.FullPath);
-        var viewModel = TestAppBuilder.CreateMainViewModel();
+        var viewModel = TestAppBuilder.CreateMainViewModel(i18n);
         var window = new MainWindow(i18n)
         {
             DataContext = viewModel,

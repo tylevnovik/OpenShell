@@ -34,9 +34,10 @@ internal sealed partial class App : Application
                 () => guiHost.CommandCancellation.Token,
                 services.GetService<Clipboard.IClipboardService>(),
                 services.GetService<History.IUndoService>(),
-                services.GetService<Commands.Builtins.IQuickLookWindow>());
+                services.GetService<Commands.Builtins.IQuickLookWindow>(),
+                i18n);
 
-            desktop.MainWindow = new Views.MainWindow
+            desktop.MainWindow = new Views.MainWindow(i18n)
             {
                 DataContext = mainVm,
             };

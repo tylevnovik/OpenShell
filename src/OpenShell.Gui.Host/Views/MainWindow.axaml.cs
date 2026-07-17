@@ -5,8 +5,10 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.LogicalTree;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using OpenShell;
 using OpenShell.Commands;
@@ -63,6 +65,12 @@ public partial class MainWindow : Window
         _recentService = services?.GetService<IRecentService>();
         _i18n ??= services?.GetService<II18nService>();
 
+        if (_i18n is not null)
+        {
+            _i18n.LocaleChanged += OnLocaleChanged;
+            ApplyTranslations();
+        }
+
         DataContextChanged += OnDataContextChanged;
         AttachedToVisualTree += OnAttachedToVisualTree;
 
@@ -81,6 +89,8 @@ public partial class MainWindow : Window
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         WireUpControls();
+        SyncActiveFileList();
+        ApplyTranslations();
     }
 
     private void WireUpControls()
@@ -88,7 +98,19 @@ public partial class MainWindow : Window
         _tabControl = this.FindControl<TabControl>("MainTabControl");
         _detailsPane = this.FindControl<Control>("DetailsPaneControl");
         _consoleOutputList = this.FindControl<ListBox>("ConsoleOutputList");
-        _mainFileListView = this.FindControl<FileListView>("MainFileListView");
+        _mainFileListView = this.GetLogicalDescendants().OfType<FileListView>().FirstOrDefault();
+    }
+
+    private void SyncActiveFileList()
+    {
+        _mainFileListView ??= this.GetLogicalDescendants().OfType<FileListView>().FirstOrDefault();
+        if (_mainFileListView is not null
+            && DataContext is MainViewModel vm
+            && vm.ActiveTabIndex >= 0
+            && vm.ActiveTabIndex < vm.Tabs.Count)
+        {
+            _mainFileListView.DataContext = vm.Tabs[vm.ActiveTabIndex];
+        }
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -131,6 +153,12 @@ public partial class MainWindow : Window
                     .Subscribe(theme => ApplyTheme(theme.Name))
                     .DisposeWith(_disposables);
             }
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                SyncActiveFileList();
+                ApplyTranslations();
+            });
         }
     }
 
@@ -370,11 +398,24 @@ public partial class MainWindow : Window
         SaveWindowRectToConfig();
         _menuVisibleSubscription?.Dispose();
         _activeTabSubscription?.Dispose();
+        if (_i18n is not null)
+        {
+            _i18n.LocaleChanged -= OnLocaleChanged;
+        }
         if (DataContext is IDisposable disposable)
         {
             disposable.Dispose();
         }
         _disposables.Dispose();
+    }
+
+    private void OnLocaleChanged(object? sender, string locale)
+        => Dispatcher.UIThread.Post(ApplyTranslations);
+
+    private void ApplyTranslations()
+    {
+        if (_i18n is not null)
+            ControlLocalizer.Apply(this, _i18n);
     }
 
     private void ToggleMenuVisibility()

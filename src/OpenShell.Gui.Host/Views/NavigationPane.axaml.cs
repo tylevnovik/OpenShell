@@ -26,17 +26,17 @@ public partial class NavigationPane : UserControl
 
         if (DataContext is MainViewModel vm)
         {
-            var quickAccess = MakeNavTreeItem("Quick access");
+            var quickAccess = MakeNavTreeItem("gui.nav.quickAccess");
             quickAccess.Tag = "quickAccess";
 
-            var thisPc = MakeNavTreeItem("This PC");
+            var thisPc = MakeNavTreeItem("gui.nav.thisPc");
             thisPc.Tag = "thisPc";
-            var cDrive = MakeNavTreeItem("Local Disk (C:)");
-            var dDrive = MakeNavTreeItem("Local Disk (D:)");
+            var cDrive = MakeNavTreeItem("gui.nav.localDisk");
+            var dDrive = MakeNavTreeItem("gui.nav.localDiskD");
             thisPc.Items.Add(cDrive);
             thisPc.Items.Add(dDrive);
 
-            var network = MakeNavTreeItem("Network");
+            var network = MakeNavTreeItem("gui.nav.network");
             network.Tag = "network";
 
             NavTree.Items.Add(quickAccess);

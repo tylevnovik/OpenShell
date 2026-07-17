@@ -17,9 +17,9 @@
 | T-503 | P1 | D-503 | 重构 Provider 取消合约测试参数与强断言 | `[x]` | T-590 | Provider contract suite |
 | T-504 | P1 | D-504 | FileSystem/SFTP 公共异步 API 优先响应预取消 token | `[x]` | T-503 | `Providers_HonorPreCancelledToken` |
 | T-505 | P0 | D-505 | CI SDK 升级为支持 `.slnx` 的 .NET 10.0.x | `[x]` | T-590 | `Ci_UsesSlnxCompatibleSdk` |
-| T-506 | P0 | D-506 | 修复 GUI 资源键泄漏与动态语言刷新 | `[~]` | T-590 | GUI stability compliance |
-| T-507 | P0 | D-507 | 窗口挂载后把文件列表绑定到活动标签页 | `[ ]` | T-506 | GUI stability compliance |
-| T-591 | P0 | — | 全量构建、测试、Skip 审计、CLI/GUI 烟测并回写结果 | `[ ]` | T-500~T-507 | 全解决方案 |
+| T-506 | P0 | D-506 | 修复 GUI 资源键泄漏与动态语言刷新 | `[x]` | T-590 | GUI stability compliance |
+| T-507 | P0 | D-507 | 窗口挂载后把文件列表绑定到活动标签页 | `[x]` | T-506 | GUI stability compliance |
+| T-591 | P0 | — | 全量构建、测试、Skip 审计、CLI/GUI 烟测并回写结果 | `[~]` | T-500~T-507 | 全解决方案 |
 
 ## 变更日志
 
@@ -31,3 +31,5 @@
 - 2026-07-18 T-504 完成：FileSystem/SFTP 公共异步入口与 SFTP 连接池优先响应取消，宽泛 catch 不再吞掉取消；Provider 合约 2 通过，Integration 13 通过 / 1 跳过。
 - 2026-07-18 T-505 完成：CI SDK 从 8.0.x 升级到 10.0.x；本地 SDK 8 探针稳定复现 `MSB4068`，工作流合规测试修复后通过。
 - 2026-07-18 T-591 验证中发现 D-506/D-507：真实 GUI 窗口泄漏资源键、文件列表未绑定活动标签页；暂停最终验收，新增 T-506/T-507。
+- 2026-07-18 T-506 完成：新增可重复的控件树翻译器，修正 XAML 错键并显式注入 i18n；中文启动与运行时切换英文合规测试通过。
+- 2026-07-18 T-507 完成：文件列表改用逻辑树查找并在窗口挂载/标签切换时同步活动 `BrowserTab`；GUI 全套 63 通过 / 0 跳过 / 0 失败。

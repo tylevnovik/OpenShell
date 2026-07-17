@@ -50,8 +50,8 @@
           <MenuItem Header="gui.viewMode.list" Tag="gui.viewMode.list" />
         </MenuItem>
         <Separator />
-        <MenuItem Header="gui.menu.showConsole" Command="{Binding ToggleConsoleCommand}" />
-        <MenuItem Header="gui.menu.commandPalette" InputGesture="Ctrl+Shift+P" Click="OnCommandPaletteClicked" />
+        <MenuItem Header="gui.menu.toggleConsole" Command="{Binding ToggleConsoleCommand}" />
+        <MenuItem Header="gui.commandPalette.title" InputGesture="Ctrl+Shift+P" Click="OnCommandPaletteClicked" />
         <MenuItem Header="gui.menu.detailsPane" Click="OnToggleDetailsPane" />
         <MenuItem Header="gui.menu.previewPane" Click="OnTogglePreviewPane" />
       </MenuItem>
@@ -106,7 +106,7 @@
         <TextBlock Text="gui.console.title" Foreground="Gray" Margin="4,2" DockPanel.Dock="Top"/>
         <DockPanel DockPanel.Dock="Bottom" Margin="4,2">
           <TextBlock Text="> " Foreground="#608060" VerticalAlignment="Center" Margin="0,0,4,0"/>
-          <TextBox Text="{Binding CommandInput}" Watermark="gui.console.inputHint"
+          <TextBox Text="{Binding CommandInput}" Watermark="gui.console.input"
                    Background="Transparent" Foreground="White" BorderThickness="0"
                    x:Name="ConsoleInputBox"/>
         </DockPanel>

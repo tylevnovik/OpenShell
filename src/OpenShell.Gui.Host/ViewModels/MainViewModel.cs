@@ -181,7 +181,7 @@ public sealed class MainViewModel : ReactiveViewModel
         NavigationItems = new ObservableCollection<NavigationItem>();
         InitializeNavigationItems();
 
-        Statusbar = new StatusbarViewModel(taskCenter);
+        Statusbar = new StatusbarViewModel(taskCenter, _i18n);
         Statusbar.UpdateFromPane(LeftPane);
 
         // T-440: 订阅 ActiveTabIndex 变化，切换 ActivePane 指向（在 Statusbar 初始化后）

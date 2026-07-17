@@ -11,10 +11,10 @@
   <DockPanel>
     <Grid DockPanel.Dock="Top" x:Name="HeaderGrid" ColumnDefinitions="24,*,Auto,Auto,Auto">
       <GridSplitter Grid.Column="0" Width="0" IsHitTestVisible="False"/>
-      <Button Grid.Column="1" Content="gui.list.name" Command="{Binding Pane.SortCommand}" CommandParameter="Name" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"/>
-      <Button Grid.Column="2" Content="gui.list.size" Command="{Binding Pane.SortCommand}" CommandParameter="Size" Width="120" HorizontalContentAlignment="Left"/>
-      <Button Grid.Column="3" Content="gui.list.type" Command="{Binding Pane.SortCommand}" CommandParameter="Type" Width="120" HorizontalContentAlignment="Left"/>
-      <Button Grid.Column="4" Content="gui.list.modified" Command="{Binding Pane.SortCommand}" CommandParameter="Modified" Width="180" HorizontalContentAlignment="Left"/>
+      <Button Grid.Column="1" Content="gui.column.name" Command="{Binding Pane.SortCommand}" CommandParameter="Name" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"/>
+      <Button Grid.Column="2" Content="gui.column.size" Command="{Binding Pane.SortCommand}" CommandParameter="Size" Width="120" HorizontalContentAlignment="Left"/>
+      <Button Grid.Column="3" Content="gui.column.type" Command="{Binding Pane.SortCommand}" CommandParameter="Type" Width="120" HorizontalContentAlignment="Left"/>
+      <Button Grid.Column="4" Content="gui.column.modified" Command="{Binding Pane.SortCommand}" CommandParameter="Modified" Width="180" HorizontalContentAlignment="Left"/>
       <GridSplitter Grid.Column="1" Width="4" Background="Transparent" ResizeBehavior="PreviousAndNext"/>
     </Grid>
     <ProgressBar IsVisible="{Binding Pane.IsLoading}" IsIndeterminate="True" Height="2" DockPanel.Dock="Top"/>
@@ -48,7 +48,7 @@
           <MenuItem Header="gui.ctx.delete" Tag="gui.ctx.delete" Command="{Binding #Root.DataContext.DeleteCommand}" InputGesture="Delete"/>
           <MenuItem Header="gui.ctx.rename" Tag="gui.ctx.rename" Command="{Binding #Root.DataContext.RenameCommand}" InputGesture="F2"/>
           <Separator/>
-          <MenuItem Header="gui.ctx.selectAll" Tag="gui.ctx.selectAll" Command="{Binding #Root.DataContext.SelectAllCommand}" InputGesture="Ctrl+A"/>
+          <MenuItem Header="gui.menu.selectAll" Tag="gui.menu.selectAll" Command="{Binding #Root.DataContext.SelectAllCommand}" InputGesture="Ctrl+A"/>
           <MenuItem Header="gui.ctx.invertSelection" Tag="gui.ctx.invertSelection" Command="{Binding #Root.DataContext.InvertSelectionCommand}"/>
           <MenuItem Header="gui.ctx.deselectAll" Tag="gui.ctx.deselectAll" Command="{Binding #Root.DataContext.DeselectAllCommand}"/>
           <Separator/>
