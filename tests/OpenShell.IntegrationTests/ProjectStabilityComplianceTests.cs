@@ -67,7 +67,7 @@ public sealed class ProjectStabilityComplianceTests
             async () => await provider.GetItemAsync(path, cts.Token));
     }
 
-    [Fact(Skip = "pending T-505")]
+    [Fact]
     public void Ci_UsesSlnxCompatibleSdk()
     {
         var workflow = File.ReadAllText(FindRepositoryFile(".github", "workflows", "ci.yml"));

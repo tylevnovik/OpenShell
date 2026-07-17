@@ -16,8 +16,8 @@
 | T-502 | P1 | D-502 | 修复 ISO 日期/日期时间字面量词法化 | `[x]` | T-590 | `FilterLexer_ParsesIsoDateLiteral` |
 | T-503 | P1 | D-503 | 重构 Provider 取消合约测试参数与强断言 | `[x]` | T-590 | Provider contract suite |
 | T-504 | P1 | D-504 | FileSystem/SFTP 公共异步 API 优先响应预取消 token | `[x]` | T-503 | `Providers_HonorPreCancelledToken` |
-| T-505 | P0 | D-505 | CI SDK 升级为支持 `.slnx` 的 .NET 10.0.x | `[~]` | T-590 | `Ci_UsesSlnxCompatibleSdk` |
-| T-591 | P0 | — | 全量构建、测试、Skip 审计、CLI/GUI 烟测并回写结果 | `[ ]` | T-500~T-505 | 全解决方案 |
+| T-505 | P0 | D-505 | CI SDK 升级为支持 `.slnx` 的 .NET 10.0.x | `[x]` | T-590 | `Ci_UsesSlnxCompatibleSdk` |
+| T-591 | P0 | — | 全量构建、测试、Skip 审计、CLI/GUI 烟测并回写结果 | `[~]` | T-500~T-505 | 全解决方案 |
 
 ## 变更日志
 
@@ -27,3 +27,4 @@
 - 2026-07-18 T-502 完成：Lexer 在数字分支前识别并验证 ISO 日期/日期时间；`ExprParserTests` 39 通过，Integration 合规测试 1 通过。
 - 2026-07-18 T-503 完成：共享 Provider 合约改用有效安全参数，完整等待三类异步返回并强制断言取消；测试已分别抓到 FileSystem/SFTP 首个违规入口。
 - 2026-07-18 T-504 完成：FileSystem/SFTP 公共异步入口与 SFTP 连接池优先响应取消，宽泛 catch 不再吞掉取消；Provider 合约 2 通过，Integration 13 通过 / 1 跳过。
+- 2026-07-18 T-505 完成：CI SDK 从 8.0.x 升级到 10.0.x；本地 SDK 8 探针稳定复现 `MSB4068`，工作流合规测试修复后通过。
