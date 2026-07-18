@@ -21,7 +21,7 @@ public sealed class GuiCliOptimizationCliComplianceTests
         result.Stdout.Should().NotContain("OpenShell Shell");
     }
 
-    [Fact(Skip = "pending T-620")]
+    [Fact]
     public async Task HelpAndVersion_AreSideEffectFree()
     {
         var help = await CliProcessRunner.RunAsync(new[] { "--help" });
@@ -38,7 +38,7 @@ public sealed class GuiCliOptimizationCliComplianceTests
         version.Stdout.Should().NotContain("Application started");
     }
 
-    [Theory(Skip = "pending T-620")]
+    [Theory]
     [InlineData("--command")]
     [InlineData("--file")]
     [InlineData("--profile")]
@@ -54,7 +54,7 @@ public sealed class GuiCliOptimizationCliComplianceTests
         result.Stderr.Should().Contain(argument).And.Contain("--help");
     }
 
-    [Fact(Skip = "pending T-620")]
+    [Fact]
     public async Task CommandAndFileModes_AreMutuallyExclusive()
     {
         var result = await CliProcessRunner.RunAsync(
@@ -65,7 +65,7 @@ public sealed class GuiCliOptimizationCliComplianceTests
         result.Stderr.Should().Contain("--command").And.Contain("--file");
     }
 
-    [Fact(Skip = "pending T-620")]
+    [Fact]
     public async Task InvalidExecutionPolicy_ReturnsUsageError()
     {
         var result = await CliProcessRunner.RunAsync(
@@ -86,4 +86,3 @@ public sealed class GuiCliOptimizationCliComplianceTests
         result.Stderr.Should().NotBeNullOrWhiteSpace();
     }
 }
-
