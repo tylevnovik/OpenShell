@@ -46,10 +46,13 @@ public class MainWindowTests
     {
         var window = new MainWindow();
 
-        // 工具栏按钮内容：← → ↑ ↻
-        var buttons = TestAppBuilder.FindDescendants<Button>(window).ToList();
-        var contents = buttons.Select(b => b.Content?.ToString()).ToList();
-        contents.Should().Contain(new[] { "←", "→", "↑", "↻" }, "Explorer 风格导航按钮应存在");
+        var toolbar = TestAppBuilder.FindDescendants<OpenShell.Gui.Host.Views.ToolBar>(window).Single();
+        foreach (var name in new[] { "BackButton", "ForwardButton", "UpButton", "RefreshButton" })
+        {
+            var button = toolbar.FindControl<Button>(name);
+            button.Should().NotBeNull($"Explorer 导航按钮 {name} 应存在");
+            button!.Content.Should().BeOfType<Viewbox>("导航命令应使用矢量图标");
+        }
     }
 
     /// <summary>Verify the window has a single file list (Explorer style, not dual-pane).</summary>
@@ -159,8 +162,8 @@ public class MainWindowTests
 
         TestAppBuilder.PumpDispatcher();
 
-        var refreshButton = TestAppBuilder.FindDescendants<Button>(window)
-            .FirstOrDefault(b => b.Content?.ToString() == "↻");
+        var toolbar = TestAppBuilder.FindDescendants<OpenShell.Gui.Host.Views.ToolBar>(window).Single();
+        var refreshButton = toolbar.FindControl<Button>("RefreshButton");
         refreshButton.Should().NotBeNull("刷新按钮应存在");
 
         vm.LeftPane.RefreshCommand.Execute().Subscribe(_ => { });

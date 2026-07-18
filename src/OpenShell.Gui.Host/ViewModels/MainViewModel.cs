@@ -55,6 +55,7 @@ public sealed record ConsoleEntry(string Text, ConsoleEntryKind Kind);
 public sealed class BrowserTab : ReactiveViewModel
 {
     private string _title;
+    private bool _isActive;
     private readonly PaneViewModel _pane;
 
     public BrowserTab(PaneViewModel pane, string title)
@@ -75,6 +76,13 @@ public sealed class BrowserTab : ReactiveViewModel
     {
         get => _title;
         set => this.RaiseAndSetIfChanged(ref _title, value);
+    }
+
+    /// <summary>当前标签是否处于活动状态，供标签模板呈现明确选中层级。</summary>
+    public bool IsActive
+    {
+        get => _isActive;
+        set => this.RaiseAndSetIfChanged(ref _isActive, value);
     }
 
     /// <summary>从 ItemPath 提取标签标题（最后一段路径，类似 Explorer 标签）。</summary>
@@ -175,6 +183,7 @@ public sealed class MainViewModel : ReactiveViewModel
         // T-440: 多标签页——初始化 Tabs 集合，第一个标签包裹 LeftPane
         Tabs = new ObservableCollection<BrowserTab>();
         var firstTab = new BrowserTab(LeftPane, GetTabTitle(initialLocation));
+        firstTab.IsActive = true;
         Tabs.Add(firstTab);
         ActiveTabIndex = 0;
 
@@ -190,6 +199,7 @@ public sealed class MainViewModel : ReactiveViewModel
             {
                 if (idx >= 0 && idx < Tabs.Count)
                 {
+                    UpdateActiveTabStates(idx);
                     ActivePane = Tabs[idx].Pane;
                     Statusbar.UpdateFromPane(ActivePane);
                 }
@@ -352,7 +362,17 @@ public sealed class MainViewModel : ReactiveViewModel
     public int ActiveTabIndex
     {
         get => _activeTabIndex;
-        set => this.RaiseAndSetIfChanged(ref _activeTabIndex, value);
+        set
+        {
+            if (_activeTabIndex == value)
+            {
+                UpdateActiveTabStates(value);
+                return;
+            }
+
+            this.RaiseAndSetIfChanged(ref _activeTabIndex, value);
+            UpdateActiveTabStates(value);
+        }
     }
 
     /// <summary>状态栏。</summary>
@@ -975,6 +995,7 @@ public sealed class MainViewModel : ReactiveViewModel
         if (tab is null) return;
         var idx = Tabs.IndexOf(tab);
         Tabs.RemoveAt(idx);
+        tab.Dispose();
         // 调整 ActiveTabIndex
         if (idx < ActiveTabIndex)
         {
@@ -984,6 +1005,15 @@ public sealed class MainViewModel : ReactiveViewModel
         {
             // 关闭的是当前 tab，切换到相邻 tab
             ActiveTabIndex = Math.Min(idx, Tabs.Count - 1);
+        }
+        UpdateActiveTabStates(ActiveTabIndex);
+    }
+
+    private void UpdateActiveTabStates(int activeIndex)
+    {
+        for (var i = 0; i < Tabs.Count; i++)
+        {
+            Tabs[i].IsActive = i == activeIndex;
         }
     }
 

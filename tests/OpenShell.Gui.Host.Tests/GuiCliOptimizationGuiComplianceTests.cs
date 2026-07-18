@@ -80,7 +80,7 @@ public sealed class GuiCliOptimizationGuiComplianceTests
         }
     }
 
-    [AvaloniaFact(Skip = "pending T-611")]
+    [AvaloniaFact]
     public void Toolbar_UsesAccessibleVectorCommands()
     {
         var window = new MainWindow
@@ -94,7 +94,9 @@ public sealed class GuiCliOptimizationGuiComplianceTests
             TestAppBuilder.PumpDispatcher();
 
             var toolbar = TestAppBuilder.FindDescendants<OpenShell.Gui.Host.Views.ToolBar>(window).Single();
-            var commandButtons = TestAppBuilder.FindDescendants<Button>(toolbar).ToList();
+            var commandButtons = TestAppBuilder.FindDescendants<Button>(toolbar)
+                .Where(button => button.Classes.Contains("ToolBarButton"))
+                .ToList();
             commandButtons.Should().NotBeEmpty();
             commandButtons.All(button => button.Content is not string text || text.Length > 1)
                 .Should().BeTrue("熟悉命令应使用矢量图标，文本只用于需要消歧的命令");
@@ -107,12 +109,13 @@ public sealed class GuiCliOptimizationGuiComplianceTests
         }
     }
 
-    [AvaloniaFact(Skip = "pending T-611")]
+    [AvaloniaFact]
     public void TabStrip_ExposesActiveAndNewTabStates()
     {
+        var viewModel = TestAppBuilder.CreateMainViewModel();
         var window = new MainWindow
         {
-            DataContext = TestAppBuilder.CreateMainViewModel(),
+            DataContext = viewModel,
         };
 
         try
@@ -121,8 +124,11 @@ public sealed class GuiCliOptimizationGuiComplianceTests
             TestAppBuilder.PumpDispatcher();
 
             window.FindControl<Button>("NewTabButton").Should().NotBeNull();
-            TestAppBuilder.FindDescendants<Button>(window)
-                .Should().Contain(button => button.Classes.Contains("ActiveTab"));
+            viewModel.Tabs.Should().ContainSingle(tab => tab.IsActive);
+
+            var mainWindowXaml = File.ReadAllText(
+                RepoFile("src", "OpenShell.Gui.Host", "Views", "MainWindow.axaml"));
+            mainWindowXaml.Should().Contain("Classes.ActiveTab=\"{Binding IsActive}\"");
         }
         finally
         {

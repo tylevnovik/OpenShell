@@ -42,9 +42,7 @@ public sealed class ProjectStabilityGuiComplianceTests
             TestAppBuilder.FindDescendants<TreeViewItem>(window)
                 .Select(item => item.Header?.ToString())
                 .Should().Contain(new[] { "Quick access", "This PC", "Network" });
-            TestAppBuilder.FindDescendants<Button>(window)
-                .Select(button => button.Content?.ToString())
-                .Should().Contain("📁 New");
+            VisibleStrings(window).Should().Contain("New folder");
         }
         finally
         {
