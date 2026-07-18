@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Automation;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using FluentAssertions;
@@ -294,7 +295,7 @@ public sealed class GuiCliOptimizationGuiComplianceTests
         restored.Tabs[1].Pane.CurrentLocation.Should().Be(ToFilePath(secondPath));
     }
 
-    [AvaloniaFact(Skip = "pending T-614")]
+    [AvaloniaFact]
     public void InteractiveControls_HaveAccessibleNamesAndFocusStyles()
     {
         var controls = File.ReadAllText(RepoFile("src", "OpenShell.Gui.Host", "Styles", "Controls.axaml"));
@@ -302,6 +303,26 @@ public sealed class GuiCliOptimizationGuiComplianceTests
 
         controls.Should().Contain(":focus-visible").And.Contain("ShellFocusBrush");
         toolbar.Should().Contain("AutomationProperties.Name");
+
+        using var tempDir = new TempDir();
+        var i18n = new ResourceI18nService(tempDir.FullPath);
+        i18n.SetLocale("en-US");
+        var window = new MainWindow(i18n)
+        {
+            DataContext = TestAppBuilder.CreateMainViewModel(i18n),
+        };
+        try
+        {
+            window.Show();
+            TestAppBuilder.PumpDispatcher();
+            var toolbarControl = TestAppBuilder.FindDescendants<OpenShell.Gui.Host.Views.ToolBar>(window).Single();
+            var backButton = toolbarControl.FindControl<Button>("BackButton");
+            AutomationProperties.GetName(backButton!).Should().Be("Back (Alt+Left)");
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 
     private static string RepoFile(params string[] parts)

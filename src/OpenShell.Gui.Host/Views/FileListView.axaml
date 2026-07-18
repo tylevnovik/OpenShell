@@ -31,7 +31,8 @@
     </Border>
     <Grid>
       <ListBox ItemsSource="{Binding Pane.Items}" SelectionMode="Multiple" Classes="FileList"
-               DoubleTapped="OnFileDoubleTapped" ContextRequested="OnContextRequested" x:Name="InnerFileList">
+               DoubleTapped="OnFileDoubleTapped" ContextRequested="OnContextRequested" x:Name="InnerFileList"
+               AutomationProperties.Name="gui.files.label">
         <ListBox.ItemTemplate>
           <DataTemplate>
             <Grid ColumnDefinitions="32,*,100,140,170">
