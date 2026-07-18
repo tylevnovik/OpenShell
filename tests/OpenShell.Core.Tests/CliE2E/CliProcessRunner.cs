@@ -13,6 +13,7 @@
 //   result.ExitCode.Should().Be(0);
 
 using System.Diagnostics;
+using System.Text;
 using OpenShell.TestUtils;
 
 namespace OpenShell.Core.Tests.CliE2E;
@@ -33,7 +34,8 @@ public static class CliProcessRunner
     public static async Task<CliProcessResult> RunAsync(
         string[] args,
         string? workingDir = null,
-        int timeoutMs = 30000)
+        int timeoutMs = 30000,
+        string? standardInput = null)
     {
         var exePath = ResolveCliExePath();
         var psi = new ProcessStartInfo
@@ -42,6 +44,9 @@ public static class CliProcessRunner
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            RedirectStandardInput = standardInput is not null,
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8,
             CreateNoWindow = true,
             // --noprofile 避免 profile 副作用干扰测试（等价 pwsh -noprofile）。
             // -ExecutionPolicy Bypass 避免执行策略拦截（测试环境）。
@@ -74,6 +79,11 @@ public static class CliProcessRunner
         };
 
         process.Start();
+        if (standardInput is not null)
+        {
+            await process.StandardInput.WriteAsync(standardInput);
+            process.StandardInput.Close();
+        }
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 

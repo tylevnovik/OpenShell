@@ -22,6 +22,31 @@ public sealed class GuiCliOptimizationCliComplianceTests
     }
 
     [Fact]
+    public async Task InteractiveStartup_DoesNotEmitFrameworkLogs()
+    {
+        var result = await CliProcessRunner.RunAsync(
+            Array.Empty<string>(),
+            timeoutMs: 10000,
+            standardInput: "exit" + Environment.NewLine);
+
+        result.ExitCode.Should().Be(ExitCodes.Success);
+        result.Stdout.Should().Contain("OpenShell");
+        result.Stdout.Should().NotContain("info:")
+            .And.NotContain("Application started")
+            .And.NotContain("Hosting environment");
+    }
+
+    [Fact]
+    public async Task UnicodeOutput_RoundTripsAsUtf8()
+    {
+        var result = await CliProcessRunner.RunCommandAsync("Write-Output \"你好，OpenShell\"");
+
+        result.ExitCode.Should().Be(ExitCodes.Success);
+        result.Stderr.Should().BeNullOrWhiteSpace();
+        result.Stdout.Should().Contain("你好，OpenShell");
+    }
+
+    [Fact]
     public async Task HelpAndVersion_AreSideEffectFree()
     {
         var help = await CliProcessRunner.RunAsync(new[] { "--help" });

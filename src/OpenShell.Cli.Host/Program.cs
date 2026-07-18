@@ -1,4 +1,5 @@
 using System.Reactive.Subjects;
+using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -52,6 +53,10 @@ internal sealed class Program
 {
     private static async Task<int> Main(string[] args)
     {
+        var utf8 = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+        Console.InputEncoding = utf8;
+        Console.OutputEncoding = utf8;
+
         var parseResult = CliInvocationParser.Parse(args);
         if (!parseResult.Succeeded)
         {
@@ -85,18 +90,17 @@ internal sealed class Program
         using var host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder()
             .ConfigureLogging(l =>
             {
+                l.ClearProviders();
                 l.AddSimpleConsole(o =>
                 {
                     o.SingleLine = true;
-                    o.TimestampFormat = "HH:mm:ss ";
+                    o.TimestampFormat = null;
                 });
-                if (isNonInteractive)
-                {
-                    // 非交互模式：只显示 Warning 以上日志，避免 info 污染 stdout
-                    l.AddFilter("Microsoft", LogLevel.Warning);
-                    l.AddFilter("OpenShell", LogLevel.Warning);
-                    l.AddFilter("System", LogLevel.Warning);
-                }
+                // 仅限制用户可见的 Console provider；结构化日志 provider 仍保留完整级别。
+                l.AddFilter((providerName, _, level) =>
+                    providerName is null
+                    || !providerName.Contains("ConsoleLoggerProvider", StringComparison.Ordinal)
+                    || level >= LogLevel.Warning);
                 // ADR-0031 §1: OpenShellLoggerProvider 通过 DI 注册为 ILoggerProvider (见 ConfigureServices 块),
                 // 由框架在构建 LoggerFactory 时自动解析 (需 ILogStore 注入)。
             })
@@ -390,8 +394,11 @@ internal sealed class Program
                 try
                 {
                     var loaded = pluginLoader.Load(manifest);
-                    Console.WriteLine(
-                        T("tui.plugins.loaded", loaded.Name, loaded.Version, loaded.Providers.Count, loaded.CommandTypes.Count));
+                    if (!isNonInteractive)
+                    {
+                        Console.WriteLine(
+                            T("tui.plugins.loaded", loaded.Name, loaded.Version, loaded.Providers.Count, loaded.CommandTypes.Count));
+                    }
                 }
                 catch (Exception ex)
                 {
