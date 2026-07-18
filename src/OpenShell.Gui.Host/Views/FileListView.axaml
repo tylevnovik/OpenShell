@@ -18,10 +18,11 @@
       <GridSplitter Grid.Column="1" Width="4" Background="Transparent" ResizeBehavior="PreviousAndNext"/>
     </Grid>
     <ProgressBar IsVisible="{Binding Pane.IsLoading}" IsIndeterminate="True" Height="2" DockPanel.Dock="Top"/>
-    <Border IsVisible="{Binding Pane.ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}" Background="#50FF0000" Padding="8" DockPanel.Dock="Top">
-      <TextBlock Text="{Binding Pane.ErrorMessage}" Foreground="Red"/>
+    <Border IsVisible="{Binding Pane.ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
+            Background="{DynamicResource ShellDangerSurfaceBrush}" Padding="8" DockPanel.Dock="Top">
+      <TextBlock Text="{Binding Pane.ErrorMessage}" Foreground="{DynamicResource ShellDangerBrush}"/>
     </Border>
-    <ListBox ItemsSource="{Binding Pane.Items}" SelectionMode="Multiple"
+    <ListBox ItemsSource="{Binding Pane.Items}" SelectionMode="Multiple" Classes="FileList"
              DoubleTapped="OnFileDoubleTapped" ContextRequested="OnContextRequested" x:Name="InnerFileList">
       <ListBox.ItemTemplate>
         <DataTemplate>

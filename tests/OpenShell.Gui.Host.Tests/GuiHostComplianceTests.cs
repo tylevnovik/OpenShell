@@ -336,10 +336,8 @@ public class GuiHostComplianceTests
 
         // T-422: 验证状态栏存在且 TasksLabel 有值
         vm.Statusbar.TasksLabel.Should().NotBeNull("TasksLabel 应有值");
-        // 状态栏应包含显示任务标签的 TextBlock（通过查找 LightGray 背景的 Border 验证状态栏存在）
-        var statusBar = TestAppBuilder.FindDescendants<Border>(window)
-            .FirstOrDefault(b => b.Background == Avalonia.Media.Brushes.LightGray);
-        statusBar.Should().NotBeNull("状态栏应存在");
+        TestAppBuilder.FindDescendants<OpenShell.Gui.Host.Views.StatusBar>(window)
+            .Should().ContainSingle("状态栏应存在");
     }
 
     // ------------------------------------------------------------------

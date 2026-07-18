@@ -41,7 +41,7 @@ public sealed class GuiCliOptimizationGuiComplianceTests
         }
     }
 
-    [Fact(Skip = "pending T-610")]
+    [Fact]
     public void App_LoadsSemanticDesignResources()
     {
         var appXaml = File.ReadAllText(RepoFile("src", "OpenShell.Gui.Host", "App.axaml"));
@@ -57,7 +57,7 @@ public sealed class GuiCliOptimizationGuiComplianceTests
             .And.Contain("ShellDangerBrush");
     }
 
-    [AvaloniaFact(Skip = "pending T-610")]
+    [AvaloniaFact]
     public void HiddenDetailsPane_CollapsesWorkspaceColumn()
     {
         var window = new MainWindow
