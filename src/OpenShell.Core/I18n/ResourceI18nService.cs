@@ -307,6 +307,8 @@ public sealed class ResourceI18nService : II18nService
         // --- GUI: MainWindow ---
         ["gui.title"] = "OpenShell",
         ["gui.search.watermark"] = "Search",
+        ["gui.address.label"] = "Address",
+        ["gui.files.label"] = "Files",
         ["gui.tool.back"] = "Back (Alt+Left)",
         ["gui.tool.forward"] = "Forward (Alt+Right)",
         ["gui.tool.up"] = "Up (Alt+Up)",
@@ -593,6 +595,8 @@ public sealed class ResourceI18nService : II18nService
         // --- GUI: MainWindow ---
         ["gui.title"] = "OpenShell",
         ["gui.search.watermark"] = "搜索",
+        ["gui.address.label"] = "地址",
+        ["gui.files.label"] = "文件列表",
         ["gui.tool.back"] = "后退 (Alt+Left)",
         ["gui.tool.forward"] = "前进 (Alt+Right)",
         ["gui.tool.up"] = "上一级 (Alt+Up)",

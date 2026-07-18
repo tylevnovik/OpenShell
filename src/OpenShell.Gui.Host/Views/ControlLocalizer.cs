@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.LogicalTree;
 using OpenShell.I18n;
@@ -79,6 +80,10 @@ internal static class ControlLocalizer
                 keys.ToolTip ??= AsResourceKey(ToolTip.GetTip(control) as string);
                 if (keys.ToolTip is not null)
                     ToolTip.SetTip(control, i18n.Translate(keys.ToolTip));
+
+                keys.AutomationName ??= AsResourceKey(AutomationProperties.GetName(control));
+                if (keys.AutomationName is not null)
+                    AutomationProperties.SetName(control, i18n.Translate(keys.AutomationName));
             }
         }
 
@@ -101,5 +106,6 @@ internal static class ControlLocalizer
         public string? Content { get; set; }
         public string? Header { get; set; }
         public string? ToolTip { get; set; }
+        public string? AutomationName { get; set; }
     }
 }

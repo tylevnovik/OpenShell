@@ -14,7 +14,7 @@
 | T-611 | P1 | D-603 | 重做紧凑命令栏与具有活动态的新标签栏 | `[x]` | T-610 | `Toolbar_UsesAccessibleVectorCommands` / `TabStrip_ExposesActiveAndNewTabStates` |
 | T-612 | P1 | D-602/D-604/D-605 | 完成文件状态、响应式列、状态栏和详情面板 | `[x]` | T-610 | `FileWorkspace_ExposesCompleteStates` / `StatusAndDetails_AreCompleteAndLocalized` |
 | T-613 | P1 | D-606 | 将 `SessionTabsService` 接入 GUI 启动、导航和关闭流程 | `[x]` | T-612 | `Tabs_RestoreAndPersistThroughSessionService` |
-| T-614 | P2 | D-607 | 补齐焦点、可访问名称、最小尺寸和中英文复验 | `[ ]` | T-611/T-612 | `InteractiveControls_HaveAccessibleNamesAndFocusStyles` |
+| T-614 | P2 | D-607 | 补齐焦点、可访问名称、最小尺寸和中英文复验 | `[x]` | T-611/T-612 | `InteractiveControls_HaveAccessibleNamesAndFocusStyles` |
 | T-615 | P0 | D-608 | 修复文件列表右键菜单到主窗口命令的绑定 | `[x]` | T-612 | `FileContextMenu_BindsToMainCommands` |
 | T-616 | P0 | D-609 | 让活动标签切换通知所有 `ActivePane` 绑定 | `[x]` | T-613 | `ActiveTabSwitch_NotifiesActivePaneBindings` |
 | T-620 | P0 | D-620/D-621/D-625 | 新增早期 CLI 参数解析、help/version 与 usage | `[ ]` | T-600 | `HelpAndVersion_AreSideEffectFree` / `InvalidInvocation_ReturnsUsageError` |
@@ -32,3 +32,4 @@
 - 2026-07-18 T-613 实施中发现 D-609：`ActivePane` 无属性通知，新增 T-616 行为测试。
 - 2026-07-18 T-613 完成：GUI 启动加载并锁定命名会话，恢复标签路径/排序/活动索引；标签变化防抖保存，应用退出显式 `FlushAsync` 后释放锁；修复 SessionTabsService dispose 保存竞态。GUI 全套 73 通过 / 2 跳过 / 0 失败。
 - 2026-07-18 T-616 完成：`ActivePane` 改为带 `RaiseAndSetIfChanged` 的响应式属性，标签切换会刷新面包屑、详情、状态和相关命令绑定。GUI 全套 74 通过 / 1 跳过 / 0 失败。
+- 2026-07-18 T-614 完成：按钮、文本框、列表项、树项和分隔拖柄增加高对比焦点态；图标命令提供自动化名称，ControlLocalizer 同步翻译屏幕阅读器名称。GUI 全套 75 通过 / 0 跳过 / 0 失败。

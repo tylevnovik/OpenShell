@@ -1,6 +1,21 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
+  <Style Selector="Button:focus-visible">
+    <Setter Property="BorderBrush" Value="{DynamicResource ShellFocusBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+
+  <Style Selector="TextBox:focus">
+    <Setter Property="BorderBrush" Value="{DynamicResource ShellFocusBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+
+  <Style Selector="ListBoxItem:focus-visible, TreeViewItem:focus-visible">
+    <Setter Property="BorderBrush" Value="{DynamicResource ShellFocusBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+
   <Style Selector="Button.ToolBarButton">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
@@ -130,6 +145,9 @@
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Style Selector="^:pointerover">
       <Setter Property="Background" Value="{DynamicResource ShellSelectedBrush}" />
+    </Style>
+    <Style Selector="^:focus-visible">
+      <Setter Property="Background" Value="{DynamicResource ShellFocusBrush}" />
     </Style>
   </Style>
 
