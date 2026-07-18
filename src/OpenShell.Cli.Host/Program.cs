@@ -487,12 +487,12 @@ internal sealed class Program
         }
         catch (OperationCanceledException)
         {
-            return 0;
+            return ExitCodes.Cancelled;
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine(T("tui.fatal", ex));
-            return 1;
+            return ExitCodes.GeneralError;
         }
         finally
         {
@@ -906,15 +906,18 @@ internal sealed class CliHost : OpenShell.IHost, ICommandLineExecutor, IDisposab
                 Ansi.WriteError(recent[i]);
             }
 
-            _lastSuccess = _errors.LastError is null;
-            _lastExitCode = _errors.LastError is null ? 0 : ExitCodes.For(_errors.LastError.Category);
+            var commandErrors = recent.Skip(errCountBefore).ToArray();
+            _lastSuccess = commandErrors.Length == 0;
+            _lastExitCode = commandErrors.Length == 0
+                ? ExitCodes.Success
+                : ExitCodes.For(commandErrors[^1].Category);
 
             // 更新自动变量（ADR-0042）。每次命令后刷新 $? / $LASTEXITCODE / $PWD / $ERROR / $ERRORS。
             _vars.SetAutomatic("?", _lastSuccess);
             _vars.SetAutomatic("LASTEXITCODE", _lastExitCode);
             _vars.SetAutomatic("PWD", CurrentLocation);
-            _vars.SetAutomatic("ERROR", _errors.LastError!);
-            _vars.SetAutomatic("ERRORS", recent.Skip(errCountBefore).ToArray());
+            _vars.SetAutomatic("ERROR", commandErrors.LastOrDefault()!);
+            _vars.SetAutomatic("ERRORS", commandErrors);
 
             // M5: 记录命令历史 (ADR-0020 / ADR-0022 §6)。debounce flush 由 FileHistoryService 处理。
             _history.Add(historyLine, _lastSuccess, _lastExitCode);
@@ -956,7 +959,7 @@ internal sealed class CliHost : OpenShell.IHost, ICommandLineExecutor, IDisposab
         {
             await DispatchAsync(command, _cts.Token);
         }
-        catch (OperationCanceledException) { return 0; }
+        catch (OperationCanceledException) { return ExitCodes.Cancelled; }
         catch (Exception ex)
         {
             _errors.Write(ErrorRecord.FromException(ex, phase: ErrorPhase.Operation));
@@ -969,7 +972,7 @@ internal sealed class CliHost : OpenShell.IHost, ICommandLineExecutor, IDisposab
             Console.Error.WriteLine($"{recent[i].Category}: {recent[i].Message}");
         }
 
-        return _errors.LastError is null ? 0 : 1;
+        return ExitCodeForNewErrors(recent, errCountBefore);
     }
 
     /// <summary>
@@ -995,7 +998,7 @@ internal sealed class CliHost : OpenShell.IHost, ICommandLineExecutor, IDisposab
         if (!File.Exists(path))
         {
             Console.Error.WriteLine($"File not found: {path}");
-            return 1;
+            return ExitCodes.GeneralError;
         }
 
         var source = File.ReadAllText(path);
@@ -1010,7 +1013,7 @@ internal sealed class CliHost : OpenShell.IHost, ICommandLineExecutor, IDisposab
         catch (ParserException ex)
         {
             Console.Error.WriteLine($"Parse error: {ex.Message}");
-            return 1;
+            return ExitCodes.ParseError;
         }
 
         // 设置 CurrentModulePath 使脚本内的 import 相对路径能相对脚本文件解析（Per T-206）。
@@ -1038,6 +1041,10 @@ internal sealed class CliHost : OpenShell.IHost, ICommandLineExecutor, IDisposab
             if (result.Signal == FlowSignalKind.Exit)
                 return result.ExitCode;
         }
+        catch (OperationCanceledException)
+        {
+            return ExitCodes.Cancelled;
+        }
         catch (Exception ex)
         {
             _errors.Write(ErrorRecord.FromException(ex, phase: ErrorPhase.Operation));
@@ -1049,8 +1056,13 @@ internal sealed class CliHost : OpenShell.IHost, ICommandLineExecutor, IDisposab
             Console.Error.WriteLine($"{recent[i].Category}: {recent[i].Message}");
         }
 
-        return _errors.LastError is null ? 0 : 1;
+        return ExitCodeForNewErrors(recent, errCountBefore);
     }
+
+    private static int ExitCodeForNewErrors(IReadOnlyList<ErrorRecord> errors, int startIndex)
+        => startIndex >= errors.Count
+            ? ExitCodes.Success
+            : ExitCodes.For(errors[^1].Category);
 
     /// <summary>
     /// 读取完整输入（可能跨多行）。Per ADR-0008 §多行输入 + ADR-0045 §13-14.
