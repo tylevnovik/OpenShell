@@ -16,4 +16,6 @@
   <StreamGeometry x:Key="IconChevronRight">M10,6L8.59,7.41 13.17,12l-4.58,4.59L10,18l6-6z</StreamGeometry>
   <StreamGeometry x:Key="IconProperties">M14,2H6c-1.1,0-2,.9-2,2v16c0,1.1.9,2 2,2h12c1.1,0 2-.9 2-2V8l-6-6zm2,16H8V4h7v5h5v9z</StreamGeometry>
   <StreamGeometry x:Key="IconShortcut">M21,5l-6,6 1.41,1.41L22.41,7H23V5h-2zm-6,6.41L8,18.41 6.59,17l7-7L15,11.41zM21,3v2l2-2h-2zm0-2v2h-4l-2,2H3v14h10v-2H5V7h8l2-2h4V3h2z</StreamGeometry>
+  <StreamGeometry x:Key="IconAdd">M11,5H13V11H19V13H13V19H11V13H5V11H11V5Z</StreamGeometry>
+  <StreamGeometry x:Key="IconClose">M6.7,5.3L12,10.6L17.3,5.3L18.7,6.7L13.4,12L18.7,17.3L17.3,18.7L12,13.4L6.7,18.7L5.3,17.3L10.6,12L5.3,6.7L6.7,5.3Z</StreamGeometry>
 </ResourceDictionary>

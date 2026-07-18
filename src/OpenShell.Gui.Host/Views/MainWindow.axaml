@@ -63,26 +63,38 @@
 
     <views:ToolBar DockPanel.Dock="Top" x:Name="ToolBarControl"/>
 
-    <DockPanel DockPanel.Dock="Top" x:Name="TabStripDockPanel" Background="Transparent">
-      <ItemsControl x:Name="TabStripItems" ItemsSource="{Binding Tabs}">
-        <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate>
-            <StackPanel Orientation="Horizontal"/>
-          </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-          <DataTemplate>
-            <StackPanel Orientation="Horizontal" Background="Transparent" Margin="2,0">
-              <Button Content="{Binding Title}" Background="Transparent" BorderThickness="0"
-                      Click="OnTabButtonClick" Tag="{Binding}" Padding="8,4"/>
-              <Button Content="x" Width="16" Height="16" Padding="0" Margin="2,0,4,0"
-                      Background="Transparent" BorderThickness="0" FontSize="10" VerticalAlignment="Center"
-                      Click="OnTabCloseButtonClick" Tag="{Binding}"/>
-            </StackPanel>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-    </DockPanel>
+    <Border DockPanel.Dock="Top" x:Name="TabStripBorder" Classes="TabStrip" Padding="6,3">
+      <Grid ColumnDefinitions="*,Auto">
+        <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+          <ItemsControl x:Name="TabStripItems" ItemsSource="{Binding Tabs}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="2"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Grid ColumnDefinitions="*,Auto">
+                  <Button Grid.Column="0" Content="{Binding Title}" ToolTip.Tip="{Binding Title}"
+                          Classes="TabButton" Classes.ActiveTab="{Binding IsActive}"
+                          Click="OnTabButtonClick" Tag="{Binding}" />
+                  <Button Grid.Column="1" ToolTip.Tip="gui.menu.closeTab" AutomationProperties.Name="gui.menu.closeTab"
+                          Classes="TabCloseButton" Click="OnTabCloseButtonClick" Tag="{Binding}"
+                          Margin="-30,2,2,2" HorizontalAlignment="Right">
+                    <Viewbox Width="14" Height="14"><Path Data="{DynamicResource IconClose}" Fill="{DynamicResource ShellTextSecondaryBrush}"/></Viewbox>
+                  </Button>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+        <Button Grid.Column="1" x:Name="NewTabButton" ToolTip.Tip="gui.menu.newTab" Margin="4,0,0,0"
+                AutomationProperties.Name="gui.menu.newTab" Classes="NewTabButton"
+                Command="{Binding NewTabCommand}">
+          <Viewbox Width="14" Height="14"><Path Data="{DynamicResource IconAdd}" Fill="{DynamicResource ShellTextPrimaryBrush}"/></Viewbox>
+        </Button>
+      </Grid>
+    </Border>
 
     <views:StatusBar DockPanel.Dock="Bottom" x:Name="StatusBarControl"/>
 

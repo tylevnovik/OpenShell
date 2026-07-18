@@ -7,12 +7,63 @@
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="8,6" />
     <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="MinHeight" Value="34" />
     <Setter Property="Foreground" Value="{DynamicResource ShellTextPrimaryBrush}" />
     <Style Selector="^:pointerover">
       <Setter Property="Background" Value="{DynamicResource ShellHoverBrush}" />
     </Style>
     <Style Selector="^:pressed">
       <Setter Property="Background" Value="{DynamicResource ShellSelectedBrush}" />
+    </Style>
+  </Style>
+
+  <Style Selector="Button.IconOnly">
+    <Setter Property="Width" Value="34" />
+    <Setter Property="Height" Value="34" />
+    <Setter Property="Padding" Value="8" />
+  </Style>
+
+  <Style Selector="Separator.CommandSeparator">
+    <Setter Property="Margin" Value="5,5" />
+    <Setter Property="Background" Value="{DynamicResource ShellBorderBrush}" />
+  </Style>
+
+  <Style Selector="Border.TabStrip">
+    <Setter Property="Background" Value="{DynamicResource ShellSidebarSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ShellBorderBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+
+  <Style Selector="Button.TabButton">
+    <Setter Property="MinWidth" Value="104" />
+    <Setter Property="MaxWidth" Value="220" />
+    <Setter Property="Height" Value="32" />
+    <Setter Property="Padding" Value="10,4" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0,0,0,2" />
+    <Setter Property="CornerRadius" Value="4,4,0,0" />
+    <Style Selector="^:pointerover">
+      <Setter Property="Background" Value="{DynamicResource ShellHoverBrush}" />
+    </Style>
+  </Style>
+
+  <Style Selector="Button.TabButton.ActiveTab">
+    <Setter Property="Background" Value="{DynamicResource ShellContentSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ShellAccentBrush}" />
+  </Style>
+
+  <Style Selector="Button.TabCloseButton, Button.NewTabButton">
+    <Setter Property="Width" Value="28" />
+    <Setter Property="Height" Value="28" />
+    <Setter Property="Padding" Value="7" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Style Selector="^:pointerover">
+      <Setter Property="Background" Value="{DynamicResource ShellHoverBrush}" />
     </Style>
   </Style>
 

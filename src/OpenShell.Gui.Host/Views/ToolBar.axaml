@@ -3,38 +3,79 @@
              xmlns:views="clr-namespace:OpenShell.Gui.Host.Views"
              x:Class="OpenShell.Gui.Host.Views.ToolBar"
              x:CompileBindings="False">
-  <StackPanel Orientation="Vertical" Spacing="2" Margin="2">
-    <DockPanel>
-      <views:BreadcrumbBar DockPanel.Dock="Left"/>
-      <TextBox DockPanel.Dock="Right" Width="200" Watermark="gui.search.watermark"
-               Text="{Binding SearchText, Mode=TwoWay}" Margin="2,0,0,0"/>
-    </DockPanel>
-    <StackPanel Orientation="Horizontal" Spacing="2">
-      <Button Content="←" ToolTip.Tip="gui.tool.back" Command="{Binding NavigateBackCommand}"
-              Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
-      <Button Content="→" ToolTip.Tip="gui.tool.forward" Command="{Binding NavigateForwardCommand}"
-              Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
-      <Button Content="↑" ToolTip.Tip="gui.tool.up" Command="{Binding NavigateUpCommand}"
-              Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
-      <Button Content="↻" ToolTip.Tip="gui.tool.refresh" Command="{Binding RefreshCommand}"
-              Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
-      <Separator Margin="4,0"/>
-      <Button Content="gui.button.new" ToolTip.Tip="gui.tool.newFolder" Command="{Binding NewFolderCommand}"
-              Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
-      <Separator Margin="4,0"/>
-      <Button Content="gui.button.copy" ToolTip.Tip="gui.tool.copy" Command="{Binding CopyCommand}"
-              Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
-      <Button Content="gui.button.cut" ToolTip.Tip="gui.tool.cut" Command="{Binding CutCommand}"
-              Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
-      <Button Content="gui.button.paste" ToolTip.Tip="gui.tool.paste" Command="{Binding PasteCommand}"
-              Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
-      <Separator Margin="4,0"/>
-      <Button Content="gui.button.move" ToolTip.Tip="gui.tool.move" Command="{Binding MoveCommand}"
-              Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
-      <Button Content="gui.button.rename" ToolTip.Tip="gui.tool.rename" Command="{Binding RenameCommand}"
-              Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
-      <Button Content="gui.button.delete" ToolTip.Tip="gui.tool.delete" Command="{Binding DeleteCommand}"
-              Classes="ToolBarButton" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="2"/>
-    </StackPanel>
-  </StackPanel>
+  <Border Background="{DynamicResource ShellSurfaceBrush}"
+          BorderBrush="{DynamicResource ShellBorderBrush}"
+          BorderThickness="0,0,0,1"
+          Padding="8,6">
+    <Grid RowDefinitions="36,Auto">
+      <Grid Grid.Row="0" ColumnDefinitions="*,240">
+        <Border Grid.Column="0" Background="{DynamicResource ShellElevatedSurfaceBrush}"
+                BorderBrush="{DynamicResource ShellBorderBrush}" BorderThickness="1" CornerRadius="4"
+                Padding="6,0">
+          <views:BreadcrumbBar />
+        </Border>
+        <TextBox Grid.Column="1" Classes="SearchBox" Watermark="gui.search.watermark" Margin="8,0,0,0"
+                 Text="{Binding SearchText, Mode=TwoWay}" />
+      </Grid>
+
+      <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="2" Margin="0,6,0,0">
+        <Button x:Name="BackButton" ToolTip.Tip="gui.tool.back" AutomationProperties.Name="gui.tool.back"
+                Command="{Binding NavigateBackCommand}" Classes="ToolBarButton IconOnly">
+          <Viewbox Width="18" Height="18"><Path Data="{DynamicResource IconBack}" Fill="{DynamicResource ShellTextPrimaryBrush}"/></Viewbox>
+        </Button>
+        <Button x:Name="ForwardButton" ToolTip.Tip="gui.tool.forward" AutomationProperties.Name="gui.tool.forward"
+                Command="{Binding NavigateForwardCommand}" Classes="ToolBarButton IconOnly">
+          <Viewbox Width="18" Height="18"><Path Data="{DynamicResource IconForward}" Fill="{DynamicResource ShellTextPrimaryBrush}"/></Viewbox>
+        </Button>
+        <Button x:Name="UpButton" ToolTip.Tip="gui.tool.up" AutomationProperties.Name="gui.tool.up"
+                Command="{Binding NavigateUpCommand}" Classes="ToolBarButton IconOnly">
+          <Viewbox Width="18" Height="18"><Path Data="{DynamicResource IconUp}" Fill="{DynamicResource ShellTextPrimaryBrush}"/></Viewbox>
+        </Button>
+        <Button x:Name="RefreshButton" ToolTip.Tip="gui.tool.refresh" AutomationProperties.Name="gui.tool.refresh"
+                Command="{Binding RefreshCommand}" Classes="ToolBarButton IconOnly">
+          <Viewbox Width="18" Height="18"><Path Data="{DynamicResource IconRefresh}" Fill="{DynamicResource ShellTextPrimaryBrush}"/></Viewbox>
+        </Button>
+
+        <Separator Classes="CommandSeparator" />
+
+        <Button x:Name="NewFolderButton" ToolTip.Tip="gui.tool.newFolder" AutomationProperties.Name="gui.tool.newFolder"
+                Command="{Binding NewFolderCommand}" Classes="ToolBarButton">
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <Viewbox Width="18" Height="18"><Path Data="{DynamicResource IconNewFolder}" Fill="{DynamicResource ShellAccentBrush}"/></Viewbox>
+            <TextBlock Text="gui.tool.newFolder" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+
+        <Separator Classes="CommandSeparator" />
+
+        <Button x:Name="CopyButton" ToolTip.Tip="gui.tool.copy" AutomationProperties.Name="gui.tool.copy"
+                Command="{Binding CopyCommand}" Classes="ToolBarButton IconOnly">
+          <Viewbox Width="18" Height="18"><Path Data="{DynamicResource IconFileCopy}" Fill="{DynamicResource ShellTextPrimaryBrush}"/></Viewbox>
+        </Button>
+        <Button x:Name="CutButton" ToolTip.Tip="gui.tool.cut" AutomationProperties.Name="gui.tool.cut"
+                Command="{Binding CutCommand}" Classes="ToolBarButton IconOnly">
+          <Viewbox Width="18" Height="18"><Path Data="{DynamicResource IconContentCut}" Fill="{DynamicResource ShellTextPrimaryBrush}"/></Viewbox>
+        </Button>
+        <Button x:Name="PasteButton" ToolTip.Tip="gui.tool.paste" AutomationProperties.Name="gui.tool.paste"
+                Command="{Binding PasteCommand}" Classes="ToolBarButton IconOnly">
+          <Viewbox Width="18" Height="18"><Path Data="{DynamicResource IconContentPaste}" Fill="{DynamicResource ShellTextPrimaryBrush}"/></Viewbox>
+        </Button>
+
+        <Separator Classes="CommandSeparator" />
+
+        <Button x:Name="MoveButton" ToolTip.Tip="gui.tool.move" AutomationProperties.Name="gui.tool.move"
+                Command="{Binding MoveCommand}" Classes="ToolBarButton IconOnly">
+          <Viewbox Width="18" Height="18"><Path Data="{DynamicResource IconFileMove}" Fill="{DynamicResource ShellTextPrimaryBrush}"/></Viewbox>
+        </Button>
+        <Button x:Name="RenameButton" ToolTip.Tip="gui.tool.rename" AutomationProperties.Name="gui.tool.rename"
+                Command="{Binding RenameCommand}" Classes="ToolBarButton IconOnly">
+          <Viewbox Width="18" Height="18"><Path Data="{DynamicResource IconRename}" Fill="{DynamicResource ShellTextPrimaryBrush}"/></Viewbox>
+        </Button>
+        <Button x:Name="DeleteButton" ToolTip.Tip="gui.tool.delete" AutomationProperties.Name="gui.tool.delete"
+                Command="{Binding DeleteCommand}" Classes="ToolBarButton IconOnly">
+          <Viewbox Width="18" Height="18"><Path Data="{DynamicResource IconDelete}" Fill="{DynamicResource ShellDangerBrush}"/></Viewbox>
+        </Button>
+      </StackPanel>
+    </Grid>
+  </Border>
 </UserControl>
