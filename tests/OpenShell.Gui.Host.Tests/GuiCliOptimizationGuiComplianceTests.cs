@@ -2,12 +2,14 @@ using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using FluentAssertions;
+using OpenShell.Gui.Host.Services;
 using OpenShell.Gui.Host.Views;
 using OpenShell.Gui.Host.ViewModels;
 using OpenShell.I18n;
 using OpenShell.Paths;
 using OpenShell.Providers;
 using OpenShell.Providers.FileSystem;
+using OpenShell.Sessions;
 using OpenShell.TestUtils;
 using Xunit;
 
@@ -236,15 +238,60 @@ public sealed class GuiCliOptimizationGuiComplianceTests
             .And.NotContain("#Root.DataContext.CopyCommand");
     }
 
-    [Fact(Skip = "pending T-613")]
-    public void Tabs_RestoreAndPersistThroughSessionService()
+    [Fact(Skip = "pending T-616")]
+    public void ActiveTabSwitch_NotifiesActivePaneBindings()
     {
-        var appSource = File.ReadAllText(RepoFile("src", "OpenShell.Gui.Host", "App.cs"));
-        var viewModelSource = File.ReadAllText(RepoFile("src", "OpenShell.Gui.Host", "ViewModels", "MainViewModel.cs"));
+        var viewModel = TestAppBuilder.CreateMainViewModel();
+        var notifications = 0;
+        viewModel.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(MainViewModel.ActivePane))
+                notifications++;
+        };
 
-        appSource.Should().Contain("SessionTabsService");
-        viewModelSource.Should().Contain("LoadTabsFromSessionAsync")
-            .And.Contain("UpdateTabs");
+        viewModel.NewTabCommand.Execute().Subscribe();
+
+        viewModel.ActivePane.Should().BeSameAs(viewModel.Tabs[1].Pane);
+        notifications.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task Tabs_RestoreAndPersistThroughSessionService()
+    {
+        using var tempDir = new TempDir();
+        var firstPath = Path.Combine(tempDir.FullPath, "first");
+        var secondPath = Path.Combine(tempDir.FullPath, "second");
+        Directory.CreateDirectory(firstPath);
+        Directory.CreateDirectory(secondPath);
+
+        var sessionService = new JsonSessionService(tempDir.FullPath);
+        await sessionService.LoadOrCreateAsync("gui-test");
+        using (var sessionTabs = new SessionTabsService(sessionService))
+        using (var viewModel = TestAppBuilder.CreateMainViewModel(sessionTabs: sessionTabs))
+        {
+            await viewModel.InitializeTabsAsync();
+            await viewModel.Tabs[0].Pane.NavigateToAsync(ToFilePath(firstPath));
+            viewModel.NewTabCommand.Execute().Subscribe();
+            await viewModel.Tabs[1].Pane.NavigateToAsync(ToFilePath(secondPath));
+            viewModel.ActiveTabIndex = 1;
+
+            viewModel.FlushTabsToSession();
+            await sessionTabs.FlushAsync();
+        }
+
+        sessionService.Current!.State.Tabs.Should().HaveCount(2);
+        sessionService.Current.State.ActiveTabIndex.Should().Be(1);
+
+        var reloadedSession = new JsonSessionService(tempDir.FullPath);
+        await reloadedSession.LoadOrCreateAsync("gui-test");
+        using var reloadedTabs = new SessionTabsService(reloadedSession);
+        using var restored = TestAppBuilder.CreateMainViewModel(sessionTabs: reloadedTabs);
+        await restored.InitializeTabsAsync();
+
+        restored.Tabs.Should().HaveCount(2);
+        restored.ActiveTabIndex.Should().Be(1);
+        restored.Tabs[0].Pane.CurrentLocation.Should().Be(ToFilePath(firstPath));
+        restored.Tabs[1].Pane.CurrentLocation.Should().Be(ToFilePath(secondPath));
     }
 
     [AvaloniaFact(Skip = "pending T-614")]
@@ -262,4 +309,10 @@ public sealed class GuiCliOptimizationGuiComplianceTests
         var root = Path.GetFullPath(Path.Combine(TestDataPaths.Root, "..", ".."));
         return Path.Combine(new[] { root }.Concat(parts).ToArray());
     }
+
+    private static ItemPath ToFilePath(string path) => new()
+    {
+        Provider = "fs",
+        InternalPath = path.Replace('\\', '/'),
+    };
 }

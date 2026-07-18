@@ -81,15 +81,15 @@ public sealed class PaneViewModel : ReactiveViewModel
         // SortCommand：按指定列切换排序方向（同列再点切换升降序，换列默认升序）
         SortCommand = ReactiveCommand.Create<SortColumn>(col =>
         {
-            if (_sortColumn == col)
+            if (SortColumn == col)
             {
-                _sortDirection = _sortDirection == SortDirection.Ascending
+                SortDirection = SortDirection == SortDirection.Ascending
                     ? SortDirection.Descending : SortDirection.Ascending;
             }
             else
             {
-                _sortColumn = col;
-                _sortDirection = SortDirection.Ascending;
+                SortColumn = col;
+                SortDirection = SortDirection.Ascending;
             }
             ApplySort();
         });

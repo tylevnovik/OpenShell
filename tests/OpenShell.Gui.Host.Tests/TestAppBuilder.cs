@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using Avalonia.Themes.Fluent;
 using OpenShell.Commands;
 using OpenShell.Gui.Abstractions;
+using OpenShell.Gui.Host.Services;
 using OpenShell.Gui.Host.ViewModels;
 using OpenShell.I18n;
 using OpenShell.Operations;
@@ -63,7 +64,9 @@ public static class TestAppBuilder
     /// <see cref="InMemoryTaskCenter"/>. The initial location points to the system temp
     /// directory so that <c>RefreshCommand</c> does not throw.
     /// </summary>
-    public static MainViewModel CreateMainViewModel(II18nService? i18n = null)
+    public static MainViewModel CreateMainViewModel(
+        II18nService? i18n = null,
+        SessionTabsService? sessionTabs = null)
     {
         var providers = new ProviderRegistry();
         providers.Register(new FileSystemProvider());
@@ -95,7 +98,8 @@ public static class TestAppBuilder
             errors,
             dispatchLine,
             cancelTokenAccessor,
-            i18n: i18n);
+            i18n: i18n,
+            sessionTabs: sessionTabs);
     }
 
     /// <summary>
