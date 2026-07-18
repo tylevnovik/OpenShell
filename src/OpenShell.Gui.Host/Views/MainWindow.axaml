@@ -10,6 +10,7 @@
         Height="800"
         MinWidth="800"
         MinHeight="500"
+        Background="{DynamicResource ShellSurfaceBrush}"
         KeyDown="OnWindowKeyDown"
         KeyUp="OnWindowKeyUp"
         Closing="OnWindowClosing"
@@ -85,33 +86,35 @@
 
     <views:StatusBar DockPanel.Dock="Bottom" x:Name="StatusBarControl"/>
 
-    <Border DockPanel.Dock="Bottom" x:Name="ErrorPanelBorder" IsVisible="{Binding IsErrorPanelVisible}" Background="#2A1A1A" MaxHeight="150">
+    <Border DockPanel.Dock="Bottom" x:Name="ErrorPanelBorder" IsVisible="{Binding IsErrorPanelVisible}"
+            Background="{DynamicResource ShellDangerSurfaceBrush}" MaxHeight="150">
       <DockPanel>
-        <TextBlock Text="gui.errors.title" Foreground="#FF6060" Margin="4,2" DockPanel.Dock="Top"/>
+        <TextBlock Text="gui.errors.title" Foreground="{DynamicResource ShellDangerBrush}" Margin="8,4" DockPanel.Dock="Top"/>
         <ListBox x:Name="ErrorListBox" ItemsSource="{Binding Errors}" Background="Transparent" BorderThickness="0">
           <ListBox.ItemTemplate>
             <DataTemplate>
-              <TextBlock Text="{Binding Message}" Foreground="#FF8080"/>
+              <TextBlock Text="{Binding Message}" Foreground="{DynamicResource ShellDangerBrush}" Margin="8,2"/>
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
       </DockPanel>
     </Border>
 
-    <Border DockPanel.Dock="Bottom" x:Name="ConsolePanelBorder" IsVisible="{Binding IsConsoleVisible}" Background="#1E1E1E" MinHeight="100">
+    <Border DockPanel.Dock="Bottom" x:Name="ConsolePanelBorder" IsVisible="{Binding IsConsoleVisible}"
+            Background="{DynamicResource ShellConsoleSurfaceBrush}" MinHeight="100">
       <DockPanel>
         <GridSplitter DockPanel.Dock="Top" Height="4" HorizontalAlignment="Stretch"
                       Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
                       ResizeDirection="Rows"/>
-        <TextBlock Text="gui.console.title" Foreground="Gray" Margin="4,2" DockPanel.Dock="Top"/>
+        <TextBlock Text="gui.console.title" Foreground="{DynamicResource ShellTextSecondaryBrush}" Margin="8,4" DockPanel.Dock="Top"/>
         <DockPanel DockPanel.Dock="Bottom" Margin="4,2">
-          <TextBlock Text="> " Foreground="#608060" VerticalAlignment="Center" Margin="0,0,4,0"/>
+          <TextBlock Text="> " Foreground="{DynamicResource ShellSuccessBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
           <TextBox Text="{Binding CommandInput}" Watermark="gui.console.input"
-                   Background="Transparent" Foreground="White" BorderThickness="0"
+                   Background="Transparent" Foreground="{DynamicResource ShellConsoleTextBrush}" BorderThickness="0"
                    x:Name="ConsoleInputBox"/>
         </DockPanel>
         <ListBox x:Name="ConsoleOutputList" ItemsSource="{Binding ConsoleOutputLines}"
-                 Background="Transparent" Foreground="LightGray" BorderThickness="0">
+                 Background="Transparent" Foreground="{DynamicResource ShellConsoleTextBrush}" BorderThickness="0">
           <ListBox.ItemTemplate>
             <DataTemplate>
               <TextBlock Text="{Binding Text}" Foreground="{Binding Kind, Converter={StaticResource ConsoleEntryBrush}}"/>
@@ -121,13 +124,13 @@
       </DockPanel>
     </Border>
 
-    <Grid>
+    <Grid x:Name="WorkspaceGrid" Background="{DynamicResource ShellContentSurfaceBrush}">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="200" MinWidth="150" />
         <ColumnDefinition Width="Auto" />
         <ColumnDefinition Width="*" />
         <ColumnDefinition Width="Auto" />
-        <ColumnDefinition Width="250" MinWidth="100" />
+        <ColumnDefinition Width="Auto" />
       </Grid.ColumnDefinitions>
 
       <views:NavigationPane Grid.Column="0" x:Name="NavPaneControl"/>
@@ -145,6 +148,7 @@
 
       <GridSplitter Grid.Column="3"
                     Width="4"
+                    IsVisible="{Binding IsDetailsPaneVisible}"
                     ResizeDirection="Columns"
                     Background="Transparent"
                     HorizontalAlignment="Stretch"
@@ -152,6 +156,7 @@
 
       <views:DetailsPane Grid.Column="4"
                          x:Name="DetailsPaneControl"
+                         Width="280"
                          IsVisible="{Binding IsDetailsPaneVisible}" />
     </Grid>
   </DockPanel>

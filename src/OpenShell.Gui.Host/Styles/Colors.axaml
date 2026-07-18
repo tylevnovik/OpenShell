@@ -2,19 +2,59 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <ResourceDictionary.ThemeDictionaries>
     <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="ShellSurfaceBrush" Color="#FFF7F7F7" />
+      <SolidColorBrush x:Key="ShellSidebarSurfaceBrush" Color="#FFF3F3F3" />
+      <SolidColorBrush x:Key="ShellContentSurfaceBrush" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="ShellElevatedSurfaceBrush" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="ShellTextPrimaryBrush" Color="#FF1A1A1A" />
+      <SolidColorBrush x:Key="ShellTextSecondaryBrush" Color="#FF5F5F5F" />
+      <SolidColorBrush x:Key="ShellBorderBrush" Color="#FFD6D6D6" />
+      <SolidColorBrush x:Key="ShellSubtleBorderBrush" Color="#FFE8E8E8" />
+      <SolidColorBrush x:Key="ShellHoverBrush" Color="#0D000000" />
+      <SolidColorBrush x:Key="ShellSelectedBrush" Color="#FFE5F1FB" />
+      <SolidColorBrush x:Key="ShellSelectedStrongBrush" Color="#FFCCE8FF" />
+      <SolidColorBrush x:Key="ShellFocusBrush" Color="#FF0067C0" />
+      <SolidColorBrush x:Key="ShellAccentBrush" Color="#FF0067C0" />
+      <SolidColorBrush x:Key="ShellDangerBrush" Color="#FFC42B1C" />
+      <SolidColorBrush x:Key="ShellDangerSurfaceBrush" Color="#FFFDE7E9" />
+      <SolidColorBrush x:Key="ShellWarningBrush" Color="#FF9D5D00" />
+      <SolidColorBrush x:Key="ShellSuccessBrush" Color="#FF0F7B0F" />
+      <SolidColorBrush x:Key="ShellConsoleSurfaceBrush" Color="#FF1F1F1F" />
+      <SolidColorBrush x:Key="ShellConsoleTextBrush" Color="#FFF0F0F0" />
+
       <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#FFFFFFFF" />
-      <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumBrush" Color="#FFEFEFEF" />
-      <SolidColorBrush x:Key="SystemControlForegroundBaseHighBrush" Color="#FF000000" />
-      <SolidColorBrush x:Key="SystemControlForegroundBaseMediumBrush" Color="#FF5A5A5A" />
-      <SolidColorBrush x:Key="SystemControlForegroundChromeHighBrush" Color="#FF000000" />
+      <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumBrush" Color="#FFF3F3F3" />
+      <SolidColorBrush x:Key="SystemControlForegroundBaseHighBrush" Color="#FF1A1A1A" />
+      <SolidColorBrush x:Key="SystemControlForegroundBaseMediumBrush" Color="#FF5F5F5F" />
+      <SolidColorBrush x:Key="SystemControlForegroundChromeHighBrush" Color="#FF1A1A1A" />
       <SolidColorBrush x:Key="SystemControlHighlightAltListLowBrush" Color="#FFE5F1FB" />
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
-      <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#FF202020" />
-      <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumBrush" Color="#FF2D2D2D" />
-      <SolidColorBrush x:Key="SystemControlForegroundBaseHighBrush" Color="#FFFFFFFF" />
-      <SolidColorBrush x:Key="SystemControlForegroundBaseMediumBrush" Color="#FF9A9A9A" />
-      <SolidColorBrush x:Key="SystemControlForegroundChromeHighBrush" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="ShellSurfaceBrush" Color="#FF202020" />
+      <SolidColorBrush x:Key="ShellSidebarSurfaceBrush" Color="#FF191919" />
+      <SolidColorBrush x:Key="ShellContentSurfaceBrush" Color="#FF252525" />
+      <SolidColorBrush x:Key="ShellElevatedSurfaceBrush" Color="#FF2B2B2B" />
+      <SolidColorBrush x:Key="ShellTextPrimaryBrush" Color="#FFF5F5F5" />
+      <SolidColorBrush x:Key="ShellTextSecondaryBrush" Color="#FFB8B8B8" />
+      <SolidColorBrush x:Key="ShellBorderBrush" Color="#FF3A3A3A" />
+      <SolidColorBrush x:Key="ShellSubtleBorderBrush" Color="#FF303030" />
+      <SolidColorBrush x:Key="ShellHoverBrush" Color="#14FFFFFF" />
+      <SolidColorBrush x:Key="ShellSelectedBrush" Color="#FF2B4A66" />
+      <SolidColorBrush x:Key="ShellSelectedStrongBrush" Color="#FF24557A" />
+      <SolidColorBrush x:Key="ShellFocusBrush" Color="#FF60CDFF" />
+      <SolidColorBrush x:Key="ShellAccentBrush" Color="#FF60CDFF" />
+      <SolidColorBrush x:Key="ShellDangerBrush" Color="#FFFF99A4" />
+      <SolidColorBrush x:Key="ShellDangerSurfaceBrush" Color="#FF44272B" />
+      <SolidColorBrush x:Key="ShellWarningBrush" Color="#FFFCE100" />
+      <SolidColorBrush x:Key="ShellSuccessBrush" Color="#FF6CCB5F" />
+      <SolidColorBrush x:Key="ShellConsoleSurfaceBrush" Color="#FF111111" />
+      <SolidColorBrush x:Key="ShellConsoleTextBrush" Color="#FFF0F0F0" />
+
+      <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#FF252525" />
+      <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumBrush" Color="#FF2B2B2B" />
+      <SolidColorBrush x:Key="SystemControlForegroundBaseHighBrush" Color="#FFF5F5F5" />
+      <SolidColorBrush x:Key="SystemControlForegroundBaseMediumBrush" Color="#FFB8B8B8" />
+      <SolidColorBrush x:Key="SystemControlForegroundChromeHighBrush" Color="#FFF5F5F5" />
       <SolidColorBrush x:Key="SystemControlHighlightAltListLowBrush" Color="#FF2B4A66" />
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>

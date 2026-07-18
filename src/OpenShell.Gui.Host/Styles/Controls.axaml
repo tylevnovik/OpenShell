@@ -7,27 +7,27 @@
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="8,6" />
     <Setter Property="CornerRadius" Value="4" />
-    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundChromeHighBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ShellTextPrimaryBrush}" />
     <Style Selector="^:pointerover">
-      <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAltListLowBrush}" />
+      <Setter Property="Background" Value="{DynamicResource ShellHoverBrush}" />
     </Style>
     <Style Selector="^:pressed">
-      <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAltListLowBrush}" />
+      <Setter Property="Background" Value="{DynamicResource ShellSelectedBrush}" />
     </Style>
   </Style>
 
   <Style Selector="ListBox.FileList">
-    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Background" Value="{DynamicResource ShellContentSurfaceBrush}" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="0" />
     <Style Selector="^ ListBoxItem">
       <Setter Property="Padding" Value="8,4" />
       <Setter Property="CornerRadius" Value="0" />
       <Style Selector="^:selected /template/ ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAltListLowBrush}" />
+        <Setter Property="Background" Value="{DynamicResource ShellSelectedBrush}" />
       </Style>
       <Style Selector="^:pointerover /template/ ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAltListLowBrush}" />
+        <Setter Property="Background" Value="{DynamicResource ShellHoverBrush}" />
       </Style>
     </Style>
   </Style>
@@ -38,23 +38,25 @@
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="6,4" />
     <Setter Property="CornerRadius" Value="4" />
-    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ShellTextPrimaryBrush}" />
     <Style Selector="^:pointerover">
-      <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAltListLowBrush}" />
+      <Setter Property="Background" Value="{DynamicResource ShellHoverBrush}" />
     </Style>
   </Style>
 
   <Style Selector="Border.StatusBar">
-    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+    <Setter Property="Background" Value="{DynamicResource ShellSidebarSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ShellBorderBrush}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
     <Setter Property="Padding" Value="8,4" />
   </Style>
 
   <Style Selector="TextBox.SearchBox">
     <Setter Property="Padding" Value="8,6" />
     <Setter Property="CornerRadius" Value="4" />
-    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
-    <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Background" Value="{DynamicResource ShellElevatedSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ShellBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Watermark" Value="搜索..." />
   </Style>
 
@@ -63,22 +65,22 @@
     <Setter Property="Width" Value="4" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Style Selector="^:pointerover">
-      <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAltListLowBrush}" />
+      <Setter Property="Background" Value="{DynamicResource ShellSelectedBrush}" />
     </Style>
   </Style>
 
   <Style Selector="TreeView.NavigationTree">
-    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+    <Setter Property="Background" Value="{DynamicResource ShellSidebarSurfaceBrush}" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="0" />
     <Style Selector="^ TreeViewItem">
       <Setter Property="Padding" Value="4,2" />
       <Setter Property="CornerRadius" Value="0" />
       <Style Selector="^:selected /template/ ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAltListLowBrush}" />
+        <Setter Property="Background" Value="{DynamicResource ShellSelectedBrush}" />
       </Style>
       <Style Selector="^:pointerover /template/ ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAltListLowBrush}" />
+        <Setter Property="Background" Value="{DynamicResource ShellHoverBrush}" />
       </Style>
     </Style>
   </Style>
