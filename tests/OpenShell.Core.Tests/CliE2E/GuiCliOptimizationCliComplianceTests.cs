@@ -2,6 +2,7 @@
 
 using FluentAssertions;
 using OpenShell.Errors;
+using OpenShell.TestUtils;
 using Xunit;
 
 namespace OpenShell.Core.Tests.CliE2E;
@@ -101,7 +102,7 @@ public sealed class GuiCliOptimizationCliComplianceTests
         result.Stderr.Should().Contain("DefinitelyInvalid");
     }
 
-    [Fact(Skip = "pending T-622")]
+    [Fact]
     public async Task CommandFailure_UsesMappedExitCode()
     {
         var result = await CliProcessRunner.RunCommandAsync("definitely-not-a-command");
@@ -109,5 +110,19 @@ public sealed class GuiCliOptimizationCliComplianceTests
         result.ExitCode.Should().Be(ExitCodes.CommandNotFound);
         result.Stdout.Should().BeNullOrWhiteSpace();
         result.Stderr.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task ScriptParseFailure_UsesParseExitCode()
+    {
+        using var tempDir = new TempDir();
+        var scriptPath = Path.Combine(tempDir.FullPath, "invalid.osh");
+        File.WriteAllText(scriptPath, "if (");
+
+        var result = await CliProcessRunner.RunFileAsync(scriptPath, tempDir.FullPath);
+
+        result.ExitCode.Should().Be(ExitCodes.ParseError);
+        result.Stdout.Should().BeNullOrWhiteSpace();
+        result.Stderr.Should().Contain("Parse error");
     }
 }
