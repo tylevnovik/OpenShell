@@ -52,17 +52,37 @@ internal sealed class Program
 {
     private static async Task<int> Main(string[] args)
     {
+        var parseResult = CliInvocationParser.Parse(args);
+        if (!parseResult.Succeeded)
+        {
+            CliUsage.WriteError(Console.Error, parseResult.Error!);
+            return ExitCodes.InvalidArgument;
+        }
+
+        var invocation = parseResult.Options!;
+        if (invocation.Mode == CliInvocationMode.Help)
+        {
+            CliUsage.WriteHelp(Console.Out);
+            return ExitCodes.Success;
+        }
+        if (invocation.Mode == CliInvocationMode.Version)
+        {
+            CliUsage.WriteVersion(Console.Out);
+            return ExitCodes.Success;
+        }
+        if (invocation.ExecutionPolicy is { } executionPolicy)
+        {
+            Environment.SetEnvironmentVariable(
+                ExecutionPolicyService.ProcessEnvVar,
+                executionPolicy.ToString());
+        }
+
         // T-300/D-307: 非交互模式（-Command/-File）下，抑制 info 级别日志输出到 stdout，
         // 避免污染命令输出（等价 pwsh -noprofile 的干净 stdout 行为）。
         // 参考 PS ref ConsoleHost.Tests.ps1：进程级测试依赖 stdout 只包含命令输出。
-        var isNonInteractive = Array.IndexOf(args, "--command") >= 0
-            || Array.IndexOf(args, "-Command") >= 0
-            || Array.IndexOf(args, "-c") >= 0
-            || Array.IndexOf(args, "--file") >= 0
-            || Array.IndexOf(args, "-File") >= 0
-            || Array.IndexOf(args, "-f") >= 0;
+        var isNonInteractive = invocation.Mode is CliInvocationMode.Command or CliInvocationMode.File;
 
-        using var host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder(args)
+        using var host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder()
             .ConfigureLogging(l =>
             {
                 l.AddSimpleConsole(o =>
@@ -387,54 +407,14 @@ internal sealed class Program
             Console.Error.WriteLine(T("tui.plugins.discoveryFailed", ex.Message));
         }
 
-        // 解析 --noprofile / --profile <path> / --ipc-server / --session <name> / --execution-policy <level> 命令行参数。
-        // 必须在 host.StartAsync 之后，因为 IProfileLoader 是单例需先实例化。
+        // 参数已在 Host 创建前完整验证；此处只把快照应用到运行时服务。
         var profileLoader = host.Services.GetRequiredService<IProfileLoader>();
-        bool startIpcServer = false;
-        string? sessionName = null;
-        // T-300: -Command <string> / -File <path> 非交互执行模式（参考 pwsh -Command/-File）。
-        string? commandString = null;
-        string? filePath = null;
-        for (int i = 0; i < args.Length; i++)
-        {
-            if (args[i] is "--noprofile")
-            {
-                profileLoader.SkipProfile = true;
-            }
-            else if (args[i] is "--profile" && i + 1 < args.Length)
-            {
-                profileLoader.CustomProfilePath = args[++i];
-            }
-            else if (args[i] is "--ipc-server")
-            {
-                startIpcServer = true;
-            }
-            else if (args[i] is "--session" && i + 1 < args.Length)
-            {
-                sessionName = args[++i];
-            }
-            // ADR-0054 §7: -ExecutionPolicy CLI flag (Process scope)。
-            // 解析后写入 OPENSHELL_EXECUTION_POLICY 环境变量, 供 ExecutionPolicyService 读取 (Process scope 优先级最高)。
-            // 注意: 此处仅解析 flag, DI 注册由 orchestrator 处理。
-            else if ((args[i] is "--execution-policy" or "-ExecutionPolicy") && i + 1 < args.Length)
-            {
-                var policyValue = args[++i];
-                Environment.SetEnvironmentVariable(
-                    OpenShell.Security.ExecutionPolicyService.ProcessEnvVar,
-                    policyValue);
-            }
-            // T-300: -Command <string> 非交互执行（参考 pwsh -Command）。
-            // 执行命令字符串（可含 ; 多语句），输出到 stdout，执行后退出。
-            else if ((args[i] is "--command" or "-Command" or "-c") && i + 1 < args.Length)
-            {
-                commandString = args[++i];
-            }
-            // T-300: -File <path> 非交互脚本文件执行（参考 pwsh -File）。
-            else if ((args[i] is "--file" or "-File" or "-f") && i + 1 < args.Length)
-            {
-                filePath = args[++i];
-            }
-        }
+        profileLoader.SkipProfile = invocation.SkipProfile;
+        profileLoader.CustomProfilePath = invocation.ProfilePath;
+        var startIpcServer = invocation.StartIpcServer;
+        var sessionName = invocation.SessionName;
+        var commandString = invocation.CommandText;
+        var filePath = invocation.FilePath;
 
         // ADR-0034: 会话加载与崩溃检测。启动时加载或创建会话 + 检测上次崩溃 + AcquireLock。
         // 默认会话名 "default"; --session <name> 指定其他会话。
