@@ -15,7 +15,7 @@
 | T-612 | P1 | D-602/D-604/D-605 | 完成文件状态、响应式列、状态栏和详情面板 | `[x]` | T-610 | `FileWorkspace_ExposesCompleteStates` / `StatusAndDetails_AreCompleteAndLocalized` |
 | T-613 | P1 | D-606 | 将 `SessionTabsService` 接入 GUI 启动、导航和关闭流程 | `[ ]` | T-612 | `Tabs_RestoreAndPersistThroughSessionService` |
 | T-614 | P2 | D-607 | 补齐焦点、可访问名称、最小尺寸和中英文复验 | `[ ]` | T-611/T-612 | `InteractiveControls_HaveAccessibleNamesAndFocusStyles` |
-| T-615 | P0 | D-608 | 修复文件列表右键菜单到主窗口命令的绑定 | `[ ]` | T-612 | `FileContextMenu_BindsToMainCommands` |
+| T-615 | P0 | D-608 | 修复文件列表右键菜单到主窗口命令的绑定 | `[x]` | T-612 | `FileContextMenu_BindsToMainCommands` |
 | T-620 | P0 | D-620/D-621/D-625 | 新增早期 CLI 参数解析、help/version 与 usage | `[ ]` | T-600 | `HelpAndVersion_AreSideEffectFree` / `InvalidInvocation_ReturnsUsageError` |
 | T-621 | P1 | D-622/D-624 | 清理 CLI 启动日志、统一 UTF-8 与 stdout/stderr | `[ ]` | T-620 | `NonInteractiveOutput_UsesCleanStreams` |
 | T-622 | P1 | D-623 | 非交互执行按错误类别和取消语义返回退出码 | `[ ]` | T-620 | `CommandFailure_UsesMappedExitCode` |
@@ -27,3 +27,4 @@
 - 2026-07-18 T-610 完成：应用显式合并语义颜色、控件与图标资源；Light/Dark token 覆盖表面、文字、边框、状态与焦点；详情面板隐藏时自适应列宽归零。GUI 全套 66 通过 / 6 跳过 / 0 失败。
 - 2026-07-18 T-611 完成：导航与文件命令统一为紧凑矢量图标按钮；新建文件夹保留图标加文本；标签增加唯一活动态、新建入口和矢量关闭按钮。GUI 全套 68 通过 / 4 跳过 / 0 失败。
 - 2026-07-18 T-612 完成：文件区区分加载、空目录、过滤无结果与可重试错误，并在刷新失败时保留已有列表；状态栏显示选中大小并按需显示任务/错误；详情面板完成 i18n 和空选择处理。GUI 全套 70 通过 / 2 跳过 / 0 失败。实施中新增 D-608/T-615。
+- 2026-07-18 T-615 完成：`BrowserTab` 暴露只读 Owner，文件列表右键菜单的窗口级命令全部改为 `Owner.*Command`，不再绑定到错误的标签 DataContext。GUI 全套 72 通过 / 2 跳过 / 0 失败。

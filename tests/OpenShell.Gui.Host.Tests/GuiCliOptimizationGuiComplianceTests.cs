@@ -221,10 +221,12 @@ public sealed class GuiCliOptimizationGuiComplianceTests
         pane.ShowFilterEmptyState.Should().BeTrue();
     }
 
-    [Fact(Skip = "pending T-615")]
+    [Fact]
     public void FileContextMenu_BindsToMainCommands()
     {
         typeof(BrowserTab).GetProperty("Owner").Should().NotBeNull();
+        var viewModel = TestAppBuilder.CreateMainViewModel();
+        viewModel.Tabs[0].Owner.Should().BeSameAs(viewModel);
 
         var fileListXaml = File.ReadAllText(
             RepoFile("src", "OpenShell.Gui.Host", "Views", "FileListView.axaml"));
