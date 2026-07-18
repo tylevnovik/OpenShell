@@ -154,6 +154,7 @@ public sealed class MainViewModel : ReactiveViewModel
     private bool _isDetailsPaneVisible;
     // T-446: 预览侧边面板可见性（默认隐藏，View > Preview Pane 切换）
     private bool _isPreviewPaneVisible;
+    private PaneViewModel _activePane = default!;
     // T-440: 多标签页——当前活动标签索引
     private int _activeTabIndex;
     private bool _menuVisible;
@@ -377,7 +378,11 @@ public sealed class MainViewModel : ReactiveViewModel
     public PaneViewModel RightPane { get; }
 
     /// <summary>活动 Pane（T-440: 切换 tab 时动态指向当前 tab 的 PaneViewModel）。</summary>
-    public PaneViewModel ActivePane { get; private set; }
+    public PaneViewModel ActivePane
+    {
+        get => _activePane;
+        private set => this.RaiseAndSetIfChanged(ref _activePane, value);
+    }
 
     /// <summary>T-440: 多标签页集合。每个 tab 持有独立的 PaneViewModel。</summary>
     public ObservableCollection<BrowserTab> Tabs { get; }

@@ -238,7 +238,7 @@ public sealed class GuiCliOptimizationGuiComplianceTests
             .And.NotContain("#Root.DataContext.CopyCommand");
     }
 
-    [Fact(Skip = "pending T-616")]
+    [Fact]
     public void ActiveTabSwitch_NotifiesActivePaneBindings()
     {
         var viewModel = TestAppBuilder.CreateMainViewModel();
