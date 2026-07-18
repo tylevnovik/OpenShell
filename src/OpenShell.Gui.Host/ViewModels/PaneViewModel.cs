@@ -31,6 +31,7 @@ public sealed class PaneViewModel : ReactiveViewModel
     private string? _addressText;
     private int _itemCount;
     private int _selectedCount;
+    private bool _hasLoaded;
 
     /// <summary>构造 PaneViewModel。</summary>
     /// <param name="providers">Provider 注册表，用于解析 IContainerProvider。</param>
@@ -44,8 +45,17 @@ public sealed class PaneViewModel : ReactiveViewModel
         SelectedItems = new ObservableCollection<IItem>();
         BreadcrumbSegments = new ObservableCollection<BreadcrumbSegment>();
 
-        Items.CollectionChanged += (_, _) => ItemCount = Items.Count;
-        SelectedItems.CollectionChanged += (_, _) => SelectedCount = SelectedItems.Count;
+        Items.CollectionChanged += (_, _) =>
+        {
+            ItemCount = Items.Count;
+            RaiseViewStateChanged();
+        };
+        SelectedItems.CollectionChanged += (_, _) =>
+        {
+            SelectedCount = SelectedItems.Count;
+            this.RaisePropertyChanged(nameof(HasSelection));
+            this.RaisePropertyChanged(nameof(PrimarySelectedItem));
+        };
 
         ItemCount = Items.Count;
         SelectedCount = SelectedItems.Count;
@@ -175,14 +185,22 @@ public sealed class PaneViewModel : ReactiveViewModel
     public bool IsLoading
     {
         get => _isLoading;
-        private set => this.RaiseAndSetIfChanged(ref _isLoading, value);
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref _isLoading, value);
+            RaiseViewStateChanged();
+        }
     }
 
     /// <summary>加载错误信息（控制 error panel 显示）。null 表示无错误。Per ADR-0015 §4.</summary>
     public string? ErrorMessage
     {
         get => _errorMessage;
-        private set => this.RaiseAndSetIfChanged(ref _errorMessage, value);
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref _errorMessage, value);
+            RaiseViewStateChanged();
+        }
     }
 
     /// <summary>当前目录的子项。绑定到 ListBox.ItemsSource。Per ADR-0013 §3.</summary>
@@ -190,6 +208,38 @@ public sealed class PaneViewModel : ReactiveViewModel
 
     /// <summary>当前选中的项。绑定到 ListBox.SelectedItems。Per ADR-0013 §3.</summary>
     public ObservableCollection<IItem> SelectedItems { get; }
+
+    /// <summary>是否至少完成过一次枚举，避免启动瞬间短暂显示空目录状态。</summary>
+    public bool HasLoaded => _hasLoaded;
+
+    /// <summary>当前是否有可显示项目。</summary>
+    public bool HasVisibleItems => Items.Count > 0;
+
+    /// <summary>首次或空列表加载时显示居中加载状态。</summary>
+    public bool ShowLoadingState => IsLoading && Items.Count == 0;
+
+    /// <summary>当前目录本身为空，而不是被筛选为空。</summary>
+    public bool ShowEmptyState => HasLoaded
+        && !IsLoading
+        && string.IsNullOrEmpty(ErrorMessage)
+        && _allItems.Count == 0;
+
+    /// <summary>目录有内容，但当前筛选没有匹配项。</summary>
+    public bool ShowFilterEmptyState => HasLoaded
+        && !IsLoading
+        && string.IsNullOrEmpty(ErrorMessage)
+        && _allItems.Count > 0
+        && Items.Count == 0
+        && !string.IsNullOrWhiteSpace(FilterText);
+
+    /// <summary>是否存在可向用户展示并重试的加载错误。</summary>
+    public bool ShowErrorState => !string.IsNullOrWhiteSpace(ErrorMessage);
+
+    /// <summary>是否存在选中项。</summary>
+    public bool HasSelection => SelectedItems.Count > 0;
+
+    /// <summary>详情面板使用的主选中项，避免在 XAML 中直接索引空集合。</summary>
+    public IItem? PrimarySelectedItem => SelectedItems.FirstOrDefault();
 
     /// <summary>T-406: 搜索过滤文本。设置后自动过滤 Items。null/空表示无过滤。</summary>
     public string? FilterText
@@ -199,6 +249,7 @@ public sealed class PaneViewModel : ReactiveViewModel
         {
             this.RaiseAndSetIfChanged(ref _filterText, value);
             ApplyFilter();
+            RaiseViewStateChanged();
         }
     }
 
@@ -265,7 +316,8 @@ public sealed class PaneViewModel : ReactiveViewModel
             if (container is null)
             {
                 ErrorMessage = $"Provider '{CurrentLocation.Provider}' does not support enumeration.";
-                Items.Clear();
+                _hasLoaded = true;
+                RaiseViewStateChanged();
                 return;
             }
 
@@ -284,6 +336,7 @@ public sealed class PaneViewModel : ReactiveViewModel
             collected = ApplySortToList(collected);
             // T-406: 保存完整列表（过滤前），再应用当前过滤
             _allItems = collected;
+            _hasLoaded = true;
             var filtered = ApplyFilterToList(collected);
             Items.Clear();
             foreach (var item in filtered) Items.Add(item);
@@ -299,7 +352,8 @@ public sealed class PaneViewModel : ReactiveViewModel
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
-            Items.Clear();
+            _hasLoaded = true;
+            RaiseViewStateChanged();
         }
         finally
         {
@@ -323,6 +377,17 @@ public sealed class PaneViewModel : ReactiveViewModel
         var filtered = ApplyFilterToList(_allItems);
         Items.Clear();
         foreach (var item in filtered) Items.Add(item);
+        RaiseViewStateChanged();
+    }
+
+    private void RaiseViewStateChanged()
+    {
+        this.RaisePropertyChanged(nameof(HasLoaded));
+        this.RaisePropertyChanged(nameof(HasVisibleItems));
+        this.RaisePropertyChanged(nameof(ShowLoadingState));
+        this.RaisePropertyChanged(nameof(ShowEmptyState));
+        this.RaisePropertyChanged(nameof(ShowFilterEmptyState));
+        this.RaisePropertyChanged(nameof(ShowErrorState));
     }
 
     /// <summary>T-406: 对列表应用 FilterText 过滤。空过滤返回原列表。</summary>

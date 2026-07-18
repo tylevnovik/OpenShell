@@ -1,33 +1,38 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:OpenShell.Gui.Host.Converters"
              x:Class="OpenShell.Gui.Host.Views.DetailsPane"
              x:CompileBindings="False">
-  <ScrollViewer>
-    <Grid Margin="8">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="Auto"/>
-        <ColumnDefinition Width="*"/>
-      </Grid.ColumnDefinitions>
-      <Grid.RowDefinitions>
-        <RowDefinition Height="Auto"/>
-        <RowDefinition Height="Auto"/>
-        <RowDefinition Height="Auto"/>
-        <RowDefinition Height="Auto"/>
-        <RowDefinition Height="Auto"/>
-        <RowDefinition Height="Auto"/>
-      </Grid.RowDefinitions>
-      <TextBlock Grid.Row="0" Grid.Column="0" Text="名称:" Margin="0,0,8,4"/>
-      <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ActivePane.SelectedItems[0].Name}" Margin="0,0,0,4"/>
-      <TextBlock Grid.Row="1" Grid.Column="0" Text="路径:" Margin="0,0,8,4"/>
-      <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ActivePane.SelectedItems[0].Path.Display}" Margin="0,0,0,4"/>
-      <TextBlock Grid.Row="2" Grid.Column="0" Text="大小:" Margin="0,0,8,4"/>
-      <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ActivePane.SelectedItems[0].Length}" Margin="0,0,0,4"/>
-      <TextBlock Grid.Row="3" Grid.Column="0" Text="类型:" Margin="0,0,8,4"/>
-      <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding ActivePane.SelectedItems[0].ContentType}" Margin="0,0,0,4"/>
-      <TextBlock Grid.Row="4" Grid.Column="0" Text="修改时间:" Margin="0,0,8,4"/>
-      <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ActivePane.SelectedItems[0].ModifiedTime}" Margin="0,0,0,4"/>
-      <TextBlock Grid.Row="5" Grid.Column="0" Text="创建时间:" Margin="0,0,8,0"/>
-      <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding ActivePane.SelectedItems[0].CreatedTime}"/>
-    </Grid>
-  </ScrollViewer>
+  <UserControl.Resources>
+    <conv:FileSizeConverter x:Key="SizeConverter"/>
+    <conv:ItemTypeConverter x:Key="TypeConverter"/>
+  </UserControl.Resources>
+  <Border Background="{DynamicResource ShellSidebarSurfaceBrush}"
+          BorderBrush="{DynamicResource ShellBorderBrush}" BorderThickness="1,0,0,0">
+    <DockPanel>
+      <TextBlock DockPanel.Dock="Top" Text="gui.detailsPane.title" FontSize="15" FontWeight="SemiBold" Margin="16,14,16,10"/>
+
+      <StackPanel IsVisible="{Binding !ActivePane.HasSelection}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8" Margin="16">
+        <Viewbox Width="34" Height="34"><Path Data="{DynamicResource IconProperties}" Fill="{DynamicResource ShellTextSecondaryBrush}"/></Viewbox>
+        <TextBlock Text="gui.detailsPane.empty" Foreground="{DynamicResource ShellTextSecondaryBrush}" TextAlignment="Center" TextWrapping="Wrap"/>
+      </StackPanel>
+
+      <ScrollViewer IsVisible="{Binding ActivePane.HasSelection}">
+        <Grid Margin="16,4" ColumnDefinitions="82,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+          <TextBlock Grid.Row="0" Grid.Column="0" Text="gui.detailsPane.name" Foreground="{DynamicResource ShellTextSecondaryBrush}" Margin="0,0,8,10"/>
+          <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ActivePane.PrimarySelectedItem.Name}" Margin="0,0,0,10" TextWrapping="Wrap"/>
+          <TextBlock Grid.Row="1" Grid.Column="0" Text="gui.detailsPane.path" Foreground="{DynamicResource ShellTextSecondaryBrush}" Margin="0,0,8,10"/>
+          <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ActivePane.PrimarySelectedItem.Path.Display}" Margin="0,0,0,10" TextWrapping="Wrap"/>
+          <TextBlock Grid.Row="2" Grid.Column="0" Text="gui.detailsPane.size" Foreground="{DynamicResource ShellTextSecondaryBrush}" Margin="0,0,8,10"/>
+          <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ActivePane.PrimarySelectedItem.Length, Converter={StaticResource SizeConverter}}" Margin="0,0,0,10"/>
+          <TextBlock Grid.Row="3" Grid.Column="0" Text="gui.detailsPane.type" Foreground="{DynamicResource ShellTextSecondaryBrush}" Margin="0,0,8,10"/>
+          <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding ActivePane.PrimarySelectedItem, Converter={StaticResource TypeConverter}}" Margin="0,0,0,10"/>
+          <TextBlock Grid.Row="4" Grid.Column="0" Text="gui.detailsPane.modified" Foreground="{DynamicResource ShellTextSecondaryBrush}" Margin="0,0,8,10"/>
+          <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ActivePane.PrimarySelectedItem.ModifiedTime}" Margin="0,0,0,10"/>
+          <TextBlock Grid.Row="5" Grid.Column="0" Text="gui.detailsPane.created" Foreground="{DynamicResource ShellTextSecondaryBrush}" Margin="0,0,8,0"/>
+          <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding ActivePane.PrimarySelectedItem.CreatedTime}"/>
+        </Grid>
+      </ScrollViewer>
+    </DockPanel>
+  </Border>
 </UserControl>

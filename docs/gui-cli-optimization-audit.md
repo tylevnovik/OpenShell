@@ -26,10 +26,13 @@
 | D-605 | P1 | 详情面板未完成 i18n 与空选择处理 | 六个字段标签硬编码中文，绑定直接索引 `SelectedItems[0]`，无选择时没有明确空状态。 |
 | D-606 | P1 | 标签会话服务已实现但未接入主窗口 | `SessionTabsService` 已注册到 DI，但 `App`/`MainViewModel` 未加载或更新它；重启后标签不会恢复。 |
 | D-607 | P2 | 可访问性和响应式约束缺少机械验证 | 图标按钮缺少统一可访问名称/焦点态；800px 最小宽度下命令栏可能溢出；现有测试多为字段存在性检查。 |
+| D-608 | P0 | 文件列表右键菜单命令绑定目标错误 | `FileListView.DataContext` 是 `BrowserTab`，但 XAML 绑定 `#Root.DataContext.CopyCommand` 等仅存在于 `MainViewModel` 的属性；菜单可见但命令为空。 |
 
 T-610 已消除 D-600/D-601：生产 `App` 现显式加载语义资源，主题专用颜色集中到 Light/Dark 字典；工作区详情列改为 `Auto`，隐藏时不再保留固定宽度。
 
 T-611 已消除 D-603：工具栏不再使用 Unicode/emoji 充当图标，活动标签状态由 `BrowserTab.IsActive` 驱动，并提供稳定的新建与关闭入口。
+
+T-612 实施中发现 D-608：现有结构测试只验证菜单项存在，未验证 `Command` 实际解析；已新增 T-615 与独立合规测试。
 
 ## 三、CLI 缺陷
 

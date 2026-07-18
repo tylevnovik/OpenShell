@@ -83,6 +83,19 @@
     </Style>
   </Style>
 
+  <Style Selector="Button.ColumnHeader">
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="Padding" Value="6,4" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ShellBorderBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,1,0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Foreground" Value="{DynamicResource ShellTextPrimaryBrush}" />
+    <Style Selector="^:pointerover">
+      <Setter Property="Background" Value="{DynamicResource ShellHoverBrush}" />
+    </Style>
+  </Style>
+
   <Style Selector="Button.BreadcrumbButton">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
