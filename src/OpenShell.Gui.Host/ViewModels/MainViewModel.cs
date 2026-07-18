@@ -13,12 +13,14 @@ using OpenShell.Commands.Builtins;
 using OpenShell.Clipboard;
 using OpenShell.Errors;
 using OpenShell.Gui.Abstractions;
+using OpenShell.Gui.Host.Services;
 using OpenShell.History;
 using OpenShell.I18n;
 using OpenShell.Items;
 using OpenShell.Operations;
 using OpenShell.Paths;
 using OpenShell.Providers;
+using OpenShell.Sessions;
 using ReactiveUI;
 
 namespace OpenShell.Gui.Host.ViewModels;
@@ -54,13 +56,15 @@ public sealed record ConsoleEntry(string Text, ConsoleEntryKind Kind);
 /// 标签标题绑定到 CurrentLocation 的最后一段路径，导航时自动更新。</summary>
 public sealed class BrowserTab : ReactiveViewModel
 {
+    private readonly Guid _id;
     private string _title;
     private bool _isActive;
     private readonly PaneViewModel _pane;
     private readonly MainViewModel _owner;
 
-    public BrowserTab(MainViewModel owner, PaneViewModel pane, string title)
+    public BrowserTab(MainViewModel owner, PaneViewModel pane, string title, Guid? id = null)
     {
+        _id = id ?? Guid.NewGuid();
         _owner = owner ?? throw new ArgumentNullException(nameof(owner));
         _pane = pane ?? throw new ArgumentNullException(nameof(pane));
         _title = title;
@@ -75,6 +79,9 @@ public sealed class BrowserTab : ReactiveViewModel
 
     /// <summary>所属主窗口 ViewModel，供标签内容中的窗口级命令绑定。</summary>
     public MainViewModel Owner => _owner;
+
+    /// <summary>跨会话保存时保持稳定的标签标识。</summary>
+    public Guid Id => _id;
 
     /// <summary>标签标题（显示在 TabItem.Header）。</summary>
     public string Title
@@ -120,6 +127,11 @@ public sealed class MainViewModel : ReactiveViewModel
     private readonly IClipboardService? _clipboard;
     private readonly IUndoService? _undo;
     private readonly IQuickLookWindow? _quickLook;
+    private readonly SessionTabsService? _sessionTabs;
+    private readonly ItemPath _initialLocation;
+    private readonly Dictionary<BrowserTab, CompositeDisposable> _tabSubscriptions = new();
+    private bool _tabsInitialized;
+    private bool _isRestoringTabs;
 
     // 导航历史栈（Explorer 风格 Back/Forward）。Per ADR-0013.
     private readonly Stack<ItemPath> _backStack = new();
@@ -164,7 +176,8 @@ public sealed class MainViewModel : ReactiveViewModel
         IUndoService? undo = null,
         IQuickLookWindow? quickLook = null,
         // T-448: 构造函数注入 II18nService，替代 Service Locator
-        II18nService? i18n = null)
+        II18nService? i18n = null,
+        SessionTabsService? sessionTabs = null)
     {
         _providers = providers ?? throw new ArgumentNullException(nameof(providers));
         _commands = commands ?? throw new ArgumentNullException(nameof(commands));
@@ -179,6 +192,8 @@ public sealed class MainViewModel : ReactiveViewModel
         _clipboard = clipboard;
         _undo = undo;
         _quickLook = quickLook;
+        _sessionTabs = sessionTabs;
+        _initialLocation = initialLocation;
 
         // 单 Pane 为主（Explorer 风格）。LeftPane 保留作为兼容字段，但 ActivePane 指向 LeftPane。
         LeftPane = new PaneViewModel(providers, initialLocation);
@@ -197,6 +212,14 @@ public sealed class MainViewModel : ReactiveViewModel
 
         Statusbar = new StatusbarViewModel(taskCenter, _i18n);
         Statusbar.UpdateFromPane(LeftPane);
+        AttachTab(firstTab);
+
+        if (_sessionTabs is not null)
+        {
+            _sessionTabs.TabsLoaded
+                .Subscribe(RestoreTabs)
+                .DisposeWith(Disposables);
+        }
 
         // T-440: 订阅 ActiveTabIndex 变化，切换 ActivePane 指向（在 Statusbar 初始化后）
         this.WhenAnyValue(x => x.ActiveTabIndex)
@@ -207,6 +230,7 @@ public sealed class MainViewModel : ReactiveViewModel
                     UpdateActiveTabStates(idx);
                     ActivePane = Tabs[idx].Pane;
                     Statusbar.UpdateFromPane(ActivePane);
+                    QueueTabsForPersistence();
                 }
             })
             .DisposeWith(Disposables);
@@ -217,11 +241,6 @@ public sealed class MainViewModel : ReactiveViewModel
             {
                 if (pane is { } p) Statusbar.UpdateFromPane(p);
             })
-            .DisposeWith(Disposables);
-
-        // 订阅 Pane 变化刷新状态栏
-        LeftPane.WhenAnyValue(x => x.CurrentLocation, x => x.Items.Count, x => x.SelectedItems.Count)
-            .Subscribe(_ => Statusbar.UpdateFromPane(LeftPane))
             .DisposeWith(Disposables);
 
         // 订阅 Pane 路径变化，维护导航历史栈。Per ADR-0013.
@@ -986,6 +1005,131 @@ public sealed class MainViewModel : ReactiveViewModel
     // T-440: 多标签页实现
     // ==================================================================
 
+    /// <summary>从活动会话恢复标签；无已保存标签时刷新默认标签。</summary>
+    public async Task InitializeTabsAsync(CancellationToken ct = default)
+    {
+        if (_sessionTabs is not null)
+        {
+            await _sessionTabs.LoadTabsFromSessionAsync(ct).ConfigureAwait(false);
+            _tabsInitialized = true;
+            QueueTabsForPersistence();
+        }
+
+        foreach (var tab in Tabs)
+        {
+            tab.Pane.RefreshCommand.Execute().Subscribe();
+        }
+    }
+
+    /// <summary>把当前标签状态同步到会话服务的待保存快照。</summary>
+    public void FlushTabsToSession()
+    {
+        if (_sessionTabs is null) return;
+        _tabsInitialized = true;
+        QueueTabsForPersistence();
+    }
+
+    private void RestoreTabs(TabsLoadedEventArgs args)
+    {
+        if (args.Tabs.Count == 0) return;
+
+        _isRestoringTabs = true;
+        try
+        {
+            foreach (var tab in Tabs.ToArray())
+            {
+                DetachTab(tab);
+                tab.Dispose();
+            }
+            Tabs.Clear();
+
+            for (var index = 0; index < args.Tabs.Count; index++)
+            {
+                var state = args.Tabs[index];
+                var pane = index == 0
+                    ? LeftPane
+                    : new PaneViewModel(_providers, RestoreLocation(state.LeftPane.CurrentLocation));
+                pane.CurrentLocation = RestoreLocation(state.LeftPane.CurrentLocation);
+                RestoreSort(pane, state.LeftPane.Sort);
+
+                var title = string.IsNullOrWhiteSpace(state.Label)
+                    ? GetTabTitle(pane.CurrentLocation)
+                    : state.Label;
+                var tab = new BrowserTab(this, pane, title, state.Id);
+                Tabs.Add(tab);
+                AttachTab(tab);
+            }
+
+            ActiveTabIndex = Math.Clamp(args.ActiveTabIndex, 0, Tabs.Count - 1);
+            UpdateActiveTabStates(ActiveTabIndex);
+        }
+        finally
+        {
+            _isRestoringTabs = false;
+        }
+    }
+
+    private ItemPath RestoreLocation(ItemPath path)
+        => _providers.ResolveCapability<IContainerProvider>(path) is not null
+            ? path
+            : _initialLocation;
+
+    private static void RestoreSort(PaneViewModel pane, string? serialized)
+    {
+        if (string.IsNullOrWhiteSpace(serialized)) return;
+        var parts = serialized.Split(':', 2);
+        if (parts.Length == 2
+            && Enum.TryParse<SortColumn>(parts[0], ignoreCase: true, out var column)
+            && Enum.TryParse<SortDirection>(parts[1], ignoreCase: true, out var direction))
+        {
+            pane.LoadSortState(column, direction);
+        }
+    }
+
+    private void AttachTab(BrowserTab tab)
+    {
+        if (_tabSubscriptions.ContainsKey(tab)) return;
+
+        var subscriptions = new CompositeDisposable();
+        tab.Pane.WhenAnyValue(x => x.CurrentLocation, x => x.ItemCount, x => x.SelectedCount)
+            .Skip(1)
+            .Subscribe(_ =>
+            {
+                if (ReferenceEquals(ActivePane, tab.Pane))
+                    Statusbar.UpdateFromPane(tab.Pane);
+                QueueTabsForPersistence();
+            })
+            .DisposeWith(subscriptions);
+        tab.Pane.WhenAnyValue(x => x.SortColumn, x => x.SortDirection)
+            .Skip(1)
+            .Subscribe(_ => QueueTabsForPersistence())
+            .DisposeWith(subscriptions);
+        _tabSubscriptions.Add(tab, subscriptions);
+    }
+
+    private void DetachTab(BrowserTab tab)
+    {
+        if (_tabSubscriptions.Remove(tab, out var subscriptions))
+            subscriptions.Dispose();
+    }
+
+    private void QueueTabsForPersistence()
+    {
+        if (_sessionTabs is null || !_tabsInitialized || _isRestoringTabs || Tabs.Count == 0)
+            return;
+
+        var states = Tabs.Select(tab => new TabState(
+            Id: tab.Id,
+            Label: tab.Title,
+            LeftPane: new PaneState(
+                CurrentLocation: tab.Pane.CurrentLocation,
+                CustomView: ViewMode.ToString(),
+                Sort: $"{tab.Pane.SortColumn}:{tab.Pane.SortDirection}"),
+            RightPane: null,
+            IsSplitView: false)).ToArray();
+        _sessionTabs.UpdateTabs(states, Math.Clamp(ActiveTabIndex, 0, states.Length - 1));
+    }
+
     /// <summary>T-440: 新建标签页——以当前活动 tab 的路径为初始位置创建新 tab 并切换过去。</summary>
     private void NewTabCore()
     {
@@ -994,9 +1138,10 @@ public sealed class MainViewModel : ReactiveViewModel
         var title = GetTabTitle(initialLocation);
         var tab = new BrowserTab(this, pane, title);
         Tabs.Add(tab);
+        AttachTab(tab);
         ActiveTabIndex = Tabs.Count - 1;
         // 触发新 tab 的首次加载
-        _ = pane.RefreshCommand.Execute();
+        pane.RefreshCommand.Execute().Subscribe();
     }
 
     /// <summary>T-440: 关闭标签页——至少保留一个 tab。参数为 null 时关闭当前 tab。</summary>
@@ -1007,6 +1152,7 @@ public sealed class MainViewModel : ReactiveViewModel
         tab ??= ActiveTabIndex >= 0 && ActiveTabIndex < Tabs.Count ? Tabs[ActiveTabIndex] : null;
         if (tab is null) return;
         var idx = Tabs.IndexOf(tab);
+        DetachTab(tab);
         Tabs.RemoveAt(idx);
         tab.Dispose();
         // 调整 ActiveTabIndex

@@ -55,6 +55,7 @@ public sealed class SessionTabsService : IDisposable
     /// <param name="ct">取消令牌。</param>
     public Task LoadTabsFromSessionAsync(CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
         var session = _sessionService.Current;
         if (session is null)
         {
@@ -93,13 +94,34 @@ public sealed class SessionTabsService : IDisposable
         _debounceTimer.Change(SaveDebounce, Timeout.InfiniteTimeSpan);
     }
 
+    /// <summary>立即持久化最新标签快照，供应用关闭前等待完成。</summary>
+    public async Task FlushAsync(CancellationToken ct = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        _debounceTimer?.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        await PersistPendingAsync(ct).ConfigureAwait(false);
+    }
+
     /// <summary>防抖定时器回调: 将最新 tabs 写入会话并保存。</summary>
     private async void OnDebounceElapsed(object? state)
     {
+        try
+        {
+            await PersistPendingAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to save tabs after debounce.");
+        }
+    }
+
+    private async Task PersistPendingAsync(CancellationToken ct)
+    {
         var tabs = _pendingTabs;
         if (tabs is null) return;
+        var activeTabIndex = _pendingActiveTabIndex;
 
-        await _saveLock.WaitAsync().ConfigureAwait(false);
+        await _saveLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             var session = _sessionService.Current;
@@ -113,16 +135,19 @@ public sealed class SessionTabsService : IDisposable
             var updatedState = session.State with
             {
                 Tabs = tabs,
-                ActiveTabIndex = _pendingActiveTabIndex,
+                ActiveTabIndex = activeTabIndex,
             };
             var updatedSession = session with { State = updatedState };
 
             _sessionService.UpdateCurrent(updatedSession);
-            await _sessionService.SaveAsync().ConfigureAwait(false);
+            await _sessionService.SaveAsync(ct).ConfigureAwait(false);
+
+            if (ReferenceEquals(_pendingTabs, tabs))
+                _pendingTabs = null;
 
             _logger?.LogDebug(
                 "Saved {Count} tab(s) to session '{Name}' (active={Active}).",
-                tabs.Count, session.Name, _pendingActiveTabIndex);
+                tabs.Count, session.Name, activeTabIndex);
         }
         catch (Exception ex)
         {
@@ -140,16 +165,8 @@ public sealed class SessionTabsService : IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        // 触发最后一次保存 (确保最新 tab 状态落盘)。
-        if (_pendingTabs is not null)
-        {
-            try { OnDebounceElapsed(null); }
-            catch { /* best-effort */ }
-        }
-
         _debounceTimer?.Dispose();
         _tabsLoaded.Dispose();
-        _saveLock.Dispose();
     }
 }
 
