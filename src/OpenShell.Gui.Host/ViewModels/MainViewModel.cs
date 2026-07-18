@@ -57,9 +57,11 @@ public sealed class BrowserTab : ReactiveViewModel
     private string _title;
     private bool _isActive;
     private readonly PaneViewModel _pane;
+    private readonly MainViewModel _owner;
 
-    public BrowserTab(PaneViewModel pane, string title)
+    public BrowserTab(MainViewModel owner, PaneViewModel pane, string title)
     {
+        _owner = owner ?? throw new ArgumentNullException(nameof(owner));
         _pane = pane ?? throw new ArgumentNullException(nameof(pane));
         _title = title;
         // 订阅 PaneViewModel.CurrentLocation 变化，自动更新标签标题
@@ -70,6 +72,9 @@ public sealed class BrowserTab : ReactiveViewModel
 
     /// <summary>标签页对应的 PaneViewModel。</summary>
     public PaneViewModel Pane => _pane;
+
+    /// <summary>所属主窗口 ViewModel，供标签内容中的窗口级命令绑定。</summary>
+    public MainViewModel Owner => _owner;
 
     /// <summary>标签标题（显示在 TabItem.Header）。</summary>
     public string Title
@@ -182,7 +187,7 @@ public sealed class MainViewModel : ReactiveViewModel
 
         // T-440: 多标签页——初始化 Tabs 集合，第一个标签包裹 LeftPane
         Tabs = new ObservableCollection<BrowserTab>();
-        var firstTab = new BrowserTab(LeftPane, GetTabTitle(initialLocation));
+        var firstTab = new BrowserTab(this, LeftPane, GetTabTitle(initialLocation));
         firstTab.IsActive = true;
         Tabs.Add(firstTab);
         ActiveTabIndex = 0;
@@ -987,7 +992,7 @@ public sealed class MainViewModel : ReactiveViewModel
         var initialLocation = ActivePane.CurrentLocation;
         var pane = new PaneViewModel(_providers, initialLocation);
         var title = GetTabTitle(initialLocation);
-        var tab = new BrowserTab(pane, title);
+        var tab = new BrowserTab(this, pane, title);
         Tabs.Add(tab);
         ActiveTabIndex = Tabs.Count - 1;
         // 触发新 tab 的首次加载
