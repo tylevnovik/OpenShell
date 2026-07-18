@@ -492,6 +492,9 @@ public sealed class MainViewModel : ReactiveViewModel
     /// <summary>错误数量（转发到 UnreadErrorCount）。</summary>
     public int ErrorCount => UnreadErrorCount;
 
+    /// <summary>有未读错误时才在状态栏显示错误入口。</summary>
+    public bool HasErrors => ErrorCount > 0;
+
     /// <summary>显示错误面板命令（转发到 ShowErrorPanelCommand）。</summary>
     public ReactiveCommand<Unit, Unit> ShowErrorsCommand => ShowErrorPanelCommand;
 
@@ -505,7 +508,12 @@ public sealed class MainViewModel : ReactiveViewModel
     public int UnreadErrorCount
     {
         get => _unreadErrorCount;
-        set => this.RaiseAndSetIfChanged(ref _unreadErrorCount, value);
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _unreadErrorCount, value);
+            this.RaisePropertyChanged(nameof(ErrorCount));
+            this.RaisePropertyChanged(nameof(HasErrors));
+        }
     }
 
     public ReactiveCommand<Unit, Unit> CopyCommand { get; }

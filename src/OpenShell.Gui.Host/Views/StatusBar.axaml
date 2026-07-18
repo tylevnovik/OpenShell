@@ -3,25 +3,30 @@
              x:Class="OpenShell.Gui.Host.Views.StatusBar"
              x:CompileBindings="False">
   <Border x:Name="PART_Border" Classes="StatusBar" Padding="8,2">
-    <Grid>
+    <Grid MinHeight="24">
       <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto"/>
         <ColumnDefinition Width="*"/>
         <ColumnDefinition Width="Auto"/>
         <ColumnDefinition Width="Auto"/>
-        <ColumnDefinition Width="Auto"/>
       </Grid.ColumnDefinitions>
-      <StackPanel Grid.Column="0" Orientation="Horizontal">
+      <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="4">
         <TextBlock x:Name="ItemsLabel" Text="gui.status.items"/>
-        <TextBlock Text="{Binding ActivePane.ItemCount}" Margin="4,0,8,0"/>
+        <TextBlock Text="{Binding Statusbar.ItemCount}" Margin="0,0,8,0"/>
         <TextBlock Text="gui.status.selected"/>
-        <TextBlock Text="{Binding ActivePane.SelectedCount}" Margin="4,0,0,0"/>
+        <TextBlock Text="{Binding Statusbar.SelectedCount}"/>
+        <TextBlock x:Name="SelectedSizeText" Text="{Binding Statusbar.SelectedSizeDisplay}"
+                   IsVisible="{Binding Statusbar.HasSelection}" Foreground="{DynamicResource ShellTextSecondaryBrush}" Margin="8,0,0,0"/>
       </StackPanel>
-      <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" Margin="8,0"/>
-      <TextBlock Grid.Column="2" Text="{Binding Statusbar.TasksLabel}" Margin="8,0"/>
-      <Button Grid.Column="3" Command="{Binding ShowErrorsCommand}" Margin="8,0,0,0">
+      <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" Margin="12,0" VerticalAlignment="Center"
+                 Foreground="{DynamicResource ShellTextSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
+      <TextBlock Grid.Column="2" Text="{Binding Statusbar.TasksLabel}" Margin="8,0" VerticalAlignment="Center"
+                 IsVisible="{Binding Statusbar.HasActiveTasks}"/>
+      <Button Grid.Column="3" Command="{Binding ShowErrorsCommand}" Margin="8,0,0,0" Padding="6,1"
+              IsVisible="{Binding HasErrors}" ToolTip.Tip="gui.status.showErrors">
         <StackPanel Orientation="Horizontal">
           <TextBlock Text="gui.status.errorsLabel"/>
-          <TextBlock Text="{Binding ErrorCount}"/>
+          <TextBlock Text="{Binding ErrorCount}" Margin="4,0,0,0"/>
         </StackPanel>
       </Button>
     </Grid>

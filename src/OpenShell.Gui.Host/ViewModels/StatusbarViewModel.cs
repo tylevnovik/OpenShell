@@ -36,7 +36,11 @@ public sealed class StatusbarViewModel : ReactiveViewModel
         // 订阅 locale 切换事件：语言变化时刷新 TasksLabel 文案。
         if (_i18n is not null)
         {
-            _i18n.LocaleChanged += (_, _) => this.RaisePropertyChanged(nameof(TasksLabel));
+            _i18n.LocaleChanged += (_, _) =>
+            {
+                this.RaisePropertyChanged(nameof(TasksLabel));
+                this.RaisePropertyChanged(nameof(SelectedSizeDisplay));
+            };
         }
 
         // 订阅任务增删事件，刷新 ActiveTaskCount。Per ADR-0044 §5.
@@ -86,6 +90,7 @@ public sealed class StatusbarViewModel : ReactiveViewModel
             if (_activeTaskCount == value) return;
             this.RaiseAndSetIfChanged(ref _activeTaskCount, value);
             this.RaisePropertyChanged(nameof(TasksLabel));
+            this.RaisePropertyChanged(nameof(HasActiveTasks));
         }
     }
 
@@ -98,6 +103,15 @@ public sealed class StatusbarViewModel : ReactiveViewModel
 
     /// <summary>T-421: 选中项大小格式化文本（如 "12.3 MB"）。</summary>
     public string SelectedSizeLabel => FormatFileSize(_selectedSize);
+
+    /// <summary>带本地化标签的选中大小文本。</summary>
+    public string SelectedSizeDisplay => T("gui.status.selectedSize", SelectedSizeLabel);
+
+    /// <summary>有选中项时才显示选中大小。</summary>
+    public bool HasSelection => SelectedCount > 0;
+
+    /// <summary>有后台任务时才显示任务入口。</summary>
+    public bool HasActiveTasks => ActiveTaskCount > 0;
 
     /// <summary>状态栏任务标签文案（"Tasks: N"）。Per ADR-0044 §5.</summary>
     public string TasksLabel => T("gui.status.tasks", _activeTaskCount);
@@ -115,6 +129,8 @@ public sealed class StatusbarViewModel : ReactiveViewModel
         // T-421: 计算选中项总大小
         SelectedSize = pane.SelectedItems.Sum(i => i.Size ?? 0);
         this.RaisePropertyChanged(nameof(SelectedSizeLabel));
+        this.RaisePropertyChanged(nameof(SelectedSizeDisplay));
+        this.RaisePropertyChanged(nameof(HasSelection));
     }
 
     /// <summary>T-421: 格式化文件大小为人类可读文本。</summary>

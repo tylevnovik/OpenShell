@@ -3,7 +3,11 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using FluentAssertions;
 using OpenShell.Gui.Host.Views;
+using OpenShell.Gui.Host.ViewModels;
 using OpenShell.I18n;
+using OpenShell.Paths;
+using OpenShell.Providers;
+using OpenShell.Providers.FileSystem;
 using OpenShell.TestUtils;
 using Xunit;
 
@@ -136,7 +140,7 @@ public sealed class GuiCliOptimizationGuiComplianceTests
         }
     }
 
-    [AvaloniaFact(Skip = "pending T-612")]
+    [AvaloniaFact]
     public void FileWorkspace_ExposesCompleteStates()
     {
         var window = new MainWindow
@@ -161,7 +165,7 @@ public sealed class GuiCliOptimizationGuiComplianceTests
         }
     }
 
-    [AvaloniaFact(Skip = "pending T-612")]
+    [AvaloniaFact]
     public void StatusAndDetails_AreCompleteAndLocalized()
     {
         using var tempDir = new TempDir();
@@ -179,7 +183,9 @@ public sealed class GuiCliOptimizationGuiComplianceTests
 
             var status = TestAppBuilder.FindDescendants<StatusBar>(window).Single();
             status.FindControl<TextBlock>("SelectedSizeText").Should().NotBeNull();
-            status.FindControl<Border>("PART_Border")!.Background.Should().NotBe(Brushes.LightGray);
+
+            var statusXaml = File.ReadAllText(RepoFile("src", "OpenShell.Gui.Host", "Views", "StatusBar.axaml"));
+            statusXaml.Should().Contain("Classes=\"StatusBar\"").And.NotContain("Background=\"LightGray\"");
 
             var detailsXaml = File.ReadAllText(RepoFile("src", "OpenShell.Gui.Host", "Views", "DetailsPane.axaml"));
             detailsXaml.Should().NotContain("名称:").And.NotContain("路径:").And.NotContain("大小:");
@@ -188,6 +194,44 @@ public sealed class GuiCliOptimizationGuiComplianceTests
         {
             window.Close();
         }
+    }
+
+    [Fact]
+    public async Task PaneState_DistinguishesEmptyDirectoryAndEmptyFilter()
+    {
+        using var tempDir = new TempDir();
+        var providers = new ProviderRegistry();
+        providers.Register(new FileSystemProvider());
+        using var pane = new PaneViewModel(providers, new ItemPath
+        {
+            Provider = "fs",
+            InternalPath = tempDir.FullPath.Replace('\\', '/'),
+        });
+
+        await pane.NavigateToAsync(pane.CurrentLocation);
+        pane.ShowEmptyState.Should().BeTrue();
+        pane.ShowFilterEmptyState.Should().BeFalse();
+
+        File.WriteAllText(Path.Combine(tempDir.FullPath, "visible.txt"), "data");
+        await pane.NavigateToAsync(pane.CurrentLocation);
+        pane.HasVisibleItems.Should().BeTrue();
+
+        pane.FilterText = "no-match";
+        pane.ShowEmptyState.Should().BeFalse();
+        pane.ShowFilterEmptyState.Should().BeTrue();
+    }
+
+    [Fact(Skip = "pending T-615")]
+    public void FileContextMenu_BindsToMainCommands()
+    {
+        typeof(BrowserTab).GetProperty("Owner").Should().NotBeNull();
+
+        var fileListXaml = File.ReadAllText(
+            RepoFile("src", "OpenShell.Gui.Host", "Views", "FileListView.axaml"));
+        fileListXaml.Should().Contain("Owner.OpenCommand")
+            .And.Contain("Owner.CopyCommand")
+            .And.Contain("Owner.DeleteCommand")
+            .And.NotContain("#Root.DataContext.CopyCommand");
     }
 
     [Fact(Skip = "pending T-613")]

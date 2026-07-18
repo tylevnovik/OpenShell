@@ -2,61 +2,91 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:conv="clr-namespace:OpenShell.Gui.Host.Converters"
              x:Class="OpenShell.Gui.Host.Views.FileListView"
+             x:Name="Root"
              x:CompileBindings="False">
   <UserControl.Resources>
     <conv:FileSizeConverter x:Key="SizeConverter"/>
     <conv:ItemTypeConverter x:Key="TypeConverter"/>
     <conv:ItemIconConverter x:Key="IconConverter"/>
   </UserControl.Resources>
-  <DockPanel>
-    <Grid DockPanel.Dock="Top" x:Name="HeaderGrid" ColumnDefinitions="24,*,Auto,Auto,Auto">
-      <GridSplitter Grid.Column="0" Width="0" IsHitTestVisible="False"/>
-      <Button Grid.Column="1" Content="gui.column.name" Command="{Binding Pane.SortCommand}" CommandParameter="Name" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"/>
-      <Button Grid.Column="2" Content="gui.column.size" Command="{Binding Pane.SortCommand}" CommandParameter="Size" Width="120" HorizontalContentAlignment="Left"/>
-      <Button Grid.Column="3" Content="gui.column.type" Command="{Binding Pane.SortCommand}" CommandParameter="Type" Width="120" HorizontalContentAlignment="Left"/>
-      <Button Grid.Column="4" Content="gui.column.modified" Command="{Binding Pane.SortCommand}" CommandParameter="Modified" Width="180" HorizontalContentAlignment="Left"/>
-      <GridSplitter Grid.Column="1" Width="4" Background="Transparent" ResizeBehavior="PreviousAndNext"/>
-    </Grid>
-    <ProgressBar IsVisible="{Binding Pane.IsLoading}" IsIndeterminate="True" Height="2" DockPanel.Dock="Top"/>
-    <Border IsVisible="{Binding Pane.ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
-            Background="{DynamicResource ShellDangerSurfaceBrush}" Padding="8" DockPanel.Dock="Top">
-      <TextBlock Text="{Binding Pane.ErrorMessage}" Foreground="{DynamicResource ShellDangerBrush}"/>
+  <DockPanel Background="{DynamicResource ShellContentSurfaceBrush}">
+    <Border DockPanel.Dock="Top" Background="{DynamicResource ShellElevatedSurfaceBrush}"
+            BorderBrush="{DynamicResource ShellBorderBrush}" BorderThickness="0,0,0,1">
+      <Grid x:Name="HeaderGrid" ColumnDefinitions="32,*,100,140,170">
+        <Button Grid.Column="1" Content="gui.column.name" Command="{Binding Pane.SortCommand}" CommandParameter="Name" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Classes="ColumnHeader"/>
+        <Button Grid.Column="2" Content="gui.column.size" Command="{Binding Pane.SortCommand}" CommandParameter="Size" HorizontalContentAlignment="Left" Classes="ColumnHeader"/>
+        <Button Grid.Column="3" Content="gui.column.type" Command="{Binding Pane.SortCommand}" CommandParameter="Type" HorizontalContentAlignment="Left" Classes="ColumnHeader"/>
+        <Button Grid.Column="4" Content="gui.column.modified" Command="{Binding Pane.SortCommand}" CommandParameter="Modified" HorizontalContentAlignment="Left" Classes="ColumnHeader"/>
+      </Grid>
     </Border>
-    <ListBox ItemsSource="{Binding Pane.Items}" SelectionMode="Multiple" Classes="FileList"
-             DoubleTapped="OnFileDoubleTapped" ContextRequested="OnContextRequested" x:Name="InnerFileList">
-      <ListBox.ItemTemplate>
-        <DataTemplate>
-          <Grid ColumnDefinitions="20,*,120,120,180">
-            <ContentControl Grid.Column="0" Content="{Binding Converter={StaticResource IconConverter}}" VerticalAlignment="Center"/>
-            <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" Margin="4,0"/>
-            <TextBlock Grid.Column="2" Text="{Binding Length, Converter={StaticResource SizeConverter}}" VerticalAlignment="Center"/>
-            <TextBlock Grid.Column="3" Text="{Binding ContentType, Converter={StaticResource TypeConverter}}" VerticalAlignment="Center"/>
-            <TextBlock Grid.Column="4" Text="{Binding ModifiedTime}" VerticalAlignment="Center"/>
-          </Grid>
-        </DataTemplate>
-      </ListBox.ItemTemplate>
-      <ListBox.ContextMenu>
-        <ContextMenu>
-          <MenuItem Header="gui.ctx.open" Tag="gui.ctx.open" Command="{Binding Pane.OpenCommand}" CommandParameter="{Binding SelectedItem, ElementName=InnerFileList}"/>
-          <MenuItem Header="gui.ctx.openWith" Tag="gui.ctx.openWith" Command="{Binding #Root.DataContext.OpenWithCommand}" CommandParameter="{Binding SelectedItem, ElementName=InnerFileList}"/>
-          <Separator/>
-          <MenuItem Header="gui.ctx.copy" Tag="gui.ctx.copy" Command="{Binding #Root.DataContext.CopyCommand}" InputGesture="Ctrl+C"/>
-          <MenuItem Header="gui.ctx.cut" Tag="gui.ctx.cut" Command="{Binding #Root.DataContext.CutCommand}" InputGesture="Ctrl+X"/>
-          <MenuItem Header="gui.ctx.paste" Tag="gui.ctx.paste" Command="{Binding #Root.DataContext.PasteCommand}" InputGesture="Ctrl+V"/>
-          <MenuItem Header="gui.ctx.copyAsPath" Tag="gui.ctx.copyAsPath" Command="{Binding #Root.DataContext.CopyAsPathCommand}"/>
-          <Separator/>
-          <MenuItem Header="gui.ctx.move" Tag="gui.ctx.move" Command="{Binding #Root.DataContext.MoveCommand}"/>
-          <MenuItem Header="gui.ctx.delete" Tag="gui.ctx.delete" Command="{Binding #Root.DataContext.DeleteCommand}" InputGesture="Delete"/>
-          <MenuItem Header="gui.ctx.rename" Tag="gui.ctx.rename" Command="{Binding #Root.DataContext.RenameCommand}" InputGesture="F2"/>
-          <Separator/>
-          <MenuItem Header="gui.menu.selectAll" Tag="gui.menu.selectAll" Command="{Binding #Root.DataContext.SelectAllCommand}" InputGesture="Ctrl+A"/>
-          <MenuItem Header="gui.ctx.invertSelection" Tag="gui.ctx.invertSelection" Command="{Binding #Root.DataContext.InvertSelectionCommand}"/>
-          <MenuItem Header="gui.ctx.deselectAll" Tag="gui.ctx.deselectAll" Command="{Binding #Root.DataContext.DeselectAllCommand}"/>
-          <Separator/>
-          <MenuItem Header="gui.ctx.createShortcut" Tag="gui.ctx.createShortcut" Command="{Binding #Root.DataContext.CreateShortcutCommand}"/>
-          <MenuItem Header="gui.ctx.properties" Tag="gui.ctx.properties" Command="{Binding #Root.DataContext.PropertiesCommand}" InputGesture="Alt+Enter"/>
-        </ContextMenu>
-      </ListBox.ContextMenu>
-    </ListBox>
+    <ProgressBar IsVisible="{Binding Pane.IsLoading}" IsIndeterminate="True" Height="2" DockPanel.Dock="Top"/>
+    <Border x:Name="ErrorStatePanel" IsVisible="{Binding Pane.ShowErrorState}"
+            Background="{DynamicResource ShellDangerSurfaceBrush}" Padding="10,7" DockPanel.Dock="Top">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Grid.Column="0" Text="{Binding Pane.ErrorMessage}" Foreground="{DynamicResource ShellDangerBrush}"
+                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+        <Button Grid.Column="1" x:Name="RetryButton" Content="common.retry" Command="{Binding Pane.RefreshCommand}"
+                Margin="12,0,0,0" Padding="10,3"/>
+      </Grid>
+    </Border>
+    <Grid>
+      <ListBox ItemsSource="{Binding Pane.Items}" SelectionMode="Multiple" Classes="FileList"
+               DoubleTapped="OnFileDoubleTapped" ContextRequested="OnContextRequested" x:Name="InnerFileList">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <Grid ColumnDefinitions="32,*,100,140,170">
+              <ContentControl Grid.Column="0" Content="{Binding Converter={StaticResource IconConverter}}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+              <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" Margin="4,0" TextTrimming="CharacterEllipsis"/>
+              <TextBlock Grid.Column="2" Text="{Binding Length, Converter={StaticResource SizeConverter}}" VerticalAlignment="Center"/>
+              <TextBlock Grid.Column="3" Text="{Binding Converter={StaticResource TypeConverter}}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+              <TextBlock Grid.Column="4" Text="{Binding ModifiedTime}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+        <ListBox.ContextMenu>
+          <ContextMenu>
+            <MenuItem Header="gui.ctx.open" Tag="gui.ctx.open" Command="{Binding Pane.OpenCommand}" CommandParameter="{Binding SelectedItem, ElementName=InnerFileList}"/>
+            <MenuItem Header="gui.ctx.openWith" Tag="gui.ctx.openWith" Command="{Binding #Root.DataContext.OpenWithCommand}" CommandParameter="{Binding SelectedItem, ElementName=InnerFileList}"/>
+            <Separator/>
+            <MenuItem Header="gui.ctx.copy" Tag="gui.ctx.copy" Command="{Binding #Root.DataContext.CopyCommand}" InputGesture="Ctrl+C"/>
+            <MenuItem Header="gui.ctx.cut" Tag="gui.ctx.cut" Command="{Binding #Root.DataContext.CutCommand}" InputGesture="Ctrl+X"/>
+            <MenuItem Header="gui.ctx.paste" Tag="gui.ctx.paste" Command="{Binding #Root.DataContext.PasteCommand}" InputGesture="Ctrl+V"/>
+            <MenuItem Header="gui.ctx.copyAsPath" Tag="gui.ctx.copyAsPath" Command="{Binding #Root.DataContext.CopyAsPathCommand}"/>
+            <Separator/>
+            <MenuItem Header="gui.ctx.move" Tag="gui.ctx.move" Command="{Binding #Root.DataContext.MoveCommand}"/>
+            <MenuItem Header="gui.ctx.delete" Tag="gui.ctx.delete" Command="{Binding #Root.DataContext.DeleteCommand}" InputGesture="Delete"/>
+            <MenuItem Header="gui.ctx.rename" Tag="gui.ctx.rename" Command="{Binding #Root.DataContext.RenameCommand}" InputGesture="F2"/>
+            <Separator/>
+            <MenuItem Header="gui.menu.selectAll" Tag="gui.menu.selectAll" Command="{Binding #Root.DataContext.SelectAllCommand}" InputGesture="Ctrl+A"/>
+            <MenuItem Header="gui.ctx.invertSelection" Tag="gui.ctx.invertSelection" Command="{Binding #Root.DataContext.InvertSelectionCommand}"/>
+            <MenuItem Header="gui.ctx.deselectAll" Tag="gui.ctx.deselectAll" Command="{Binding #Root.DataContext.DeselectAllCommand}"/>
+            <Separator/>
+            <MenuItem Header="gui.ctx.createShortcut" Tag="gui.ctx.createShortcut" Command="{Binding #Root.DataContext.CreateShortcutCommand}"/>
+            <MenuItem Header="gui.ctx.properties" Tag="gui.ctx.properties" Command="{Binding #Root.DataContext.PropertiesCommand}" InputGesture="Alt+Enter"/>
+          </ContextMenu>
+        </ListBox.ContextMenu>
+      </ListBox>
+
+      <Border x:Name="EmptyStatePanel" IsVisible="{Binding Pane.ShowEmptyState}" Background="{DynamicResource ShellContentSurfaceBrush}">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+          <Viewbox Width="38" Height="38"><Path Data="{DynamicResource IconFolder}" Fill="{DynamicResource ShellTextSecondaryBrush}"/></Viewbox>
+          <TextBlock Text="gui.empty.folder" Foreground="{DynamicResource ShellTextSecondaryBrush}" FontSize="14"/>
+        </StackPanel>
+      </Border>
+
+      <Border x:Name="FilterEmptyStatePanel" IsVisible="{Binding Pane.ShowFilterEmptyState}" Background="{DynamicResource ShellContentSurfaceBrush}">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+          <Viewbox Width="34" Height="34"><Path Data="{DynamicResource IconSearch}" Fill="{DynamicResource ShellTextSecondaryBrush}"/></Viewbox>
+          <TextBlock Text="gui.empty.filter" Foreground="{DynamicResource ShellTextSecondaryBrush}" FontSize="14"/>
+        </StackPanel>
+      </Border>
+
+      <Border IsVisible="{Binding Pane.ShowLoadingState}" Background="{DynamicResource ShellContentSurfaceBrush}">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+          <ProgressBar IsIndeterminate="True" Width="160" Height="3"/>
+          <TextBlock Text="gui.loading" Foreground="{DynamicResource ShellTextSecondaryBrush}" HorizontalAlignment="Center"/>
+        </StackPanel>
+      </Border>
+    </Grid>
   </DockPanel>
 </UserControl>

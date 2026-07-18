@@ -298,6 +298,7 @@ public sealed class ResourceI18nService : II18nService
         ["common.details"] = "Details",
         ["common.run"] = "Run",
         ["common.clear"] = "Clear",
+        ["common.retry"] = "Retry",
         // --- 错误 ---
         ["error.commandNotFound"] = "command not found: {0}",
         ["error.commandSuggestion"] = "try 'get-command' to list available commands",
@@ -471,6 +472,7 @@ public sealed class ResourceI18nService : II18nService
         ["gui.status.selectedSize"] = "Selected size: {0}",
         ["gui.status.freeSpace"] = "Free space: {0}",
         ["gui.empty.folder"] = "This folder is empty",
+        ["gui.empty.filter"] = "No items match this search",
         ["gui.loading"] = "Loading...",
         ["gui.theme.light"] = "Light",
         ["gui.theme.dark"] = "Dark",
@@ -498,6 +500,7 @@ public sealed class ResourceI18nService : II18nService
         ["gui.detailsPane.type"] = "Type",
         ["gui.detailsPane.modified"] = "Modified",
         ["gui.detailsPane.created"] = "Created",
+        ["gui.detailsPane.empty"] = "Select an item to view its properties",
         // T-446: 预览侧边面板
         ["gui.previewPane.title"] = "Preview",
         ["gui.menu.previewPane"] = "Preview Pane",
@@ -581,6 +584,7 @@ public sealed class ResourceI18nService : II18nService
         ["common.details"] = "详情",
         ["common.run"] = "运行",
         ["common.clear"] = "清除",
+        ["common.retry"] = "重试",
         // --- 错误 ---
         ["error.commandNotFound"] = "未找到命令: {0}",
         ["error.commandSuggestion"] = "输入 'get-command' 列出可用命令",
@@ -754,6 +758,7 @@ public sealed class ResourceI18nService : II18nService
         ["gui.status.selectedSize"] = "选中大小: {0}",
         ["gui.status.freeSpace"] = "可用空间: {0}",
         ["gui.empty.folder"] = "此文件夹为空",
+        ["gui.empty.filter"] = "没有符合当前搜索的项目",
         ["gui.loading"] = "加载中...",
         ["gui.theme.light"] = "浅色",
         ["gui.theme.dark"] = "深色",
@@ -781,6 +786,7 @@ public sealed class ResourceI18nService : II18nService
         ["gui.detailsPane.type"] = "类型",
         ["gui.detailsPane.modified"] = "修改时间",
         ["gui.detailsPane.created"] = "创建时间",
+        ["gui.detailsPane.empty"] = "选择一个项目以查看属性",
         // T-446: 预览侧边面板
         ["gui.previewPane.title"] = "预览",
         ["gui.menu.previewPane"] = "预览面板",
