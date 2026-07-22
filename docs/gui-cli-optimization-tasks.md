@@ -20,7 +20,7 @@
 | T-620 | P0 | D-620/D-621/D-625 | 新增早期 CLI 参数解析、help/version 与 usage | `[x]` | T-600 | `HelpAndVersion_AreSideEffectFree` / `InvalidInvocation_ReturnsUsageError` |
 | T-621 | P1 | D-622/D-624 | 清理 CLI 启动日志、统一 UTF-8 与 stdout/stderr | `[x]` | T-620 | `NonInteractiveOutput_UsesCleanStreams` |
 | T-622 | P1 | D-623 | 非交互执行按错误类别和取消语义返回退出码 | `[x]` | T-620 | `CommandFailure_UsesMappedExitCode` |
-| T-630 | P0 | - | 全量构建、测试、CLI 进程烟测和 GUI 双尺寸截图复验 | `[ ]` | T-610~T-622 | 全解决方案 |
+| T-630 | P0 | - | 全量构建、测试、CLI 进程烟测和 GUI 双尺寸截图复验 | `[~]` | T-610~T-622 | 全解决方案 |
 
 ## 变更日志
 
