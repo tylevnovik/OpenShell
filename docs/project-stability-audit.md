@@ -49,3 +49,11 @@
 - 仅保留 2 个真实 SFTP 基础设施 Skip，不再保留 bug/取消契约 Skip。
 - `dotnet build OpenShell.slnx` 为 0 警告 / 0 错误。
 - 全解决方案测试 0 失败，CLI 命令执行与 GUI 启动烟测通过。
+
+## 六、最终验收记录（T-591，2026-08-27）
+
+- `dotnet build OpenShell.slnx --nologo`：0 警告 / 0 错误（含 NuGet 审计；此前阻塞项见 gui-cli-optimization 主题 D-626 SSH.NET 升级）。
+- 全解决方案测试（连跑两遍）：**2119 通过 / 2 跳过 / 0 失败**；跳过项仅为两个真实 SFTP 基础设施测试（符合「明确边界」）。
+- CLI 真实进程烟测：`--version` / `--help` 退出码 0；未知参数退出码 3 且 stderr 给出 usage；`-Command` 成功退出码 0、命令未找到退出码 4；`-File` 脚本执行退出码 0。
+- GUI 烟测：`dotnet run --project src/OpenShell.Gui.Host` 启动，窗口进程稳定运行 12 秒无异常后正常终止。
+- 验收中发现并修复的新缺陷均已回写 `docs/gui-cli-optimization-audit.md`（D-626/D-627/D-628，对应 T-623/T-624/T-625）。

@@ -61,6 +61,15 @@ T-622 已消除 D-623：非交互命令和脚本只依据本次错误集返回 A
 | D-623 | P1 | 非交互退出码丢失错误类别 | `RunCommandAsync` 对所有错误返回 1，对取消返回 0，与 ADR-0026 和 `ExitCodes.For` 冲突。 |
 | D-624 | P1 | stdout/stderr 与编码契约不完整 | help/version 包含 info 日志和 banner；未显式设置 UTF-8；重定向消费方无法稳定解析输出。 |
 | D-625 | P2 | 顶层调用逻辑集中在 2223 行 `Program.cs` | 参数探测、DI、会话、插件和运行模式耦合，导致新增参数容易出现两套不一致判断。 |
+| D-626 | P0 | SSH.NET 2025.1.0 高危漏洞导致构建失败 | 2026-08-27 验收扫描发现：NuGet 审计 NU1903（GHSA-q939-rpr3-3284，高危，影响 ≤2025.1.0）被 `TreatWarningsAsErrors` 升级为错误，`dotnet build OpenShell.slnx` 在 main 与当前分支均失败，CI 同样失败。修复版本为 2026.0.0。 |
+| D-627 | P0 | 非交互调用参与会话生命周期，污染 stderr 并破坏在途锁 | 2026-08-27 验收扫描发现：`-Command`/`-File` 一次性执行仍会 DetectCrash + LoadOrCreate + AcquireLock + Save + ReleaseLock（`Program.cs` 会话初始化/退出块）。并行非交互进程共享 `default` 锁，互相触发 `[会话] 会话 'default' 可能正在运行…` 写入 stderr，击穿 T-621 干净流契约；全解决方案并行测试 2/2 复现（每次命中不同测试）。且一次性进程会覆盖再删除在途 REPL/GUI 的锁文件，并在退出时用旧快照回写会话 JSON，存在状态覆盖竞态。CLI 宿主从不把会话状态应用回运行时（不恢复路径/历史），非交互执行从会话中无任何收益。 |
+| D-628 | P1 | AST 路径把字符串按字符枚举绑定到数组参数 | 2026-08-27 T-630 烟测发现：脚本文件（`-File`）中 `Write-Output "quoted"` / `Write-Output bare` 输出按字符逐项展开（12/13 项），而 `-Command` 字符串快路径输出单项。根因：`Evaluator.ConvertValue` 的数组分支把 `string` 当作 `IEnumerable`（即 `IEnumerable<char>`）逐元素转换；`char[]` 目标除外均应按 PowerShell 语义把字符串包成单元素数组。 |
+
+T-623 已消除 D-626：`Directory.Packages.props` 将 SSH.NET 升级至 2026.0.0（公告修复版本），构建恢复 0 警告 / 0 错误，Remote Provider 套件全绿。
+
+T-624 已消除 D-627：非交互模式（`-Command`/`-File`）完全跳过会话生命周期（崩溃检测、加载、抢锁、保存、释放），交互 REPL 行为不变；新增并行调用与在途锁保护合规测试。
+
+T-625 已消除 D-628：`Evaluator.ConvertValue` 数组绑定对 `string` 值包成单元素数组（仅 `char[]` 目标保留按字符展开）；新增脚本文件 `Write-Output` 单项输出合规测试。
 
 ## 四、修复策略
 
