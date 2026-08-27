@@ -246,19 +246,28 @@ public sealed class FileSystemProvider :
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!d.IsReady) continue;
+            // D-700: Windows 驱动器名形如 "C:\"，Unix 为 "/"；统一规范化为内部路径（结尾单 '/'）。
+            var name = d.Name.TrimEnd('\\');
+            var rootInternal = name.Replace('\\', '/');
+            if (!rootInternal.EndsWith('/')) rootInternal += "/";
+            string label;
+            try { label = d.VolumeLabel; } catch { label = string.Empty; }
+            long totalSize = 0, freeSpace = 0;
+            try { totalSize = d.TotalSize; freeSpace = d.AvailableFreeSpace; } catch { /* Unix 特殊文件系统可能不支持 */ }
             result.Add(new ProviderDrive
             {
-                Name = d.Name.TrimEnd('\\'),
-                Root = new ItemPath { Provider = "fs", InternalPath = d.Name.TrimEnd('\\') + "/" },
-                DisplayLabel = d.VolumeLabel.Length > 0 ? $"{d.VolumeLabel} ({d.Name.TrimEnd('\\')})" : d.Name,
-                TotalSize = d.TotalSize,
-                FreeSpace = d.AvailableFreeSpace,
+                Name = name,
+                Root = new ItemPath { Provider = "fs", InternalPath = rootInternal },
+                DisplayLabel = label.Length > 0 ? $"{label} ({name})" : name,
+                TotalSize = totalSize,
+                FreeSpace = freeSpace,
             });
         }
         return result;
     }
 
-    private static string ToFsPath(ItemPath path) => path.InternalPath.Replace('/', '\\');
+    // D-700: 使用平台分隔符。内部路径统一为 '/'，Windows 转换为 '\'，Unix 保持 '/'。
+    private static string ToFsPath(ItemPath path) => path.InternalPath.Replace('/', IOPath.DirectorySeparatorChar);
 
     private static Item ToItem(FileSystemInfo info, ItemPath path)
     {

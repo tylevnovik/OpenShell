@@ -132,7 +132,7 @@ public sealed class ExpandArchiveCommand : ICommand<ExpandArchiveCommand.Args>
         if (System.IO.Path.IsPathRooted(path))
             return path;
         if (ctx.CurrentLocation.Provider == "fs")
-            return System.IO.Path.Combine(ctx.CurrentLocation.InternalPath.Replace('/', '\\'), path);
+            return System.IO.Path.Combine(ctx.CurrentLocation.InternalPath.Replace('/', System.IO.Path.DirectorySeparatorChar), path);
         return System.IO.Path.GetFullPath(path);
     }
 }

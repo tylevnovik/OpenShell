@@ -167,7 +167,7 @@ public sealed class CompressArchiveCommand : ICommand<CompressArchiveCommand.Arg
             return path;
         // 相对路径: 基于 fs CurrentLocation.
         if (ctx.CurrentLocation.Provider == "fs")
-            return System.IO.Path.Combine(ctx.CurrentLocation.InternalPath.Replace('/', '\\'), path);
+            return System.IO.Path.Combine(ctx.CurrentLocation.InternalPath.Replace('/', System.IO.Path.DirectorySeparatorChar), path);
         return System.IO.Path.GetFullPath(path);
     }
 }
