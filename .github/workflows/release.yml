@@ -25,9 +25,12 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          # D-508: 与 ci.yml 安装的 SDK 版本线保持一致。
+          dotnet-version: '10.0.x'
 
       - name: Publish CLI
+        # D-508: 显式 bash——Windows runner 默认 pwsh 无法展开 ${GITHUB_REF_NAME#v}。
+        shell: bash
         run: >
           dotnet publish src/OpenShell.Cli.Host/OpenShell.Cli.Host.csproj
           -c Release
@@ -37,6 +40,7 @@ jobs:
           --self-contained
 
       - name: Publish GUI
+        shell: bash
         run: >
           dotnet publish src/OpenShell.Gui.Host/OpenShell.Gui.Host.csproj
           -c Release
@@ -104,9 +108,11 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          # D-508: 与 ci.yml 的 SDK 对齐。
+          dotnet-version: '10.0.x'
 
       - name: Pack
+        shell: bash
         run: >
           dotnet pack src/OpenShell.Core/OpenShell.Core.csproj
           -c Release

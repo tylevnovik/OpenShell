@@ -75,6 +75,30 @@ public sealed class ProjectStabilityComplianceTests
         Assert.Contains("dotnet-version: '10.0.x'", workflow, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Release_UsesCiAlignedSdkAndBashExpansion()
+    {
+        // D-508: 发布流水线必须与 ci.yml 的 SDK 对齐，且 ${GITHUB_REF_NAME#v} 只在 bash 下展开。
+        var workflow = File.ReadAllText(FindRepositoryFile(".github", "workflows", "release.yml"));
+
+        Assert.DoesNotContain("8.0.x", workflow, StringComparison.Ordinal);
+        var sdkCount = workflow.Split("dotnet-version: '10.0.x'").Length - 1;
+        Assert.Equal(2, sdkCount);
+
+        // 逐步骤块检查：使用版本号展开的 run 步骤必须声明 shell: bash
+        // （Windows runner 默认 pwsh，不支持 ${VAR#prefix} 参数展开）。
+        foreach (var step in workflow.Split("- name:"))
+        {
+            if (step.Contains("${GITHUB_REF_NAME#v}", StringComparison.Ordinal)
+                && step.Contains("run:", StringComparison.Ordinal))
+            {
+                Assert.True(step.Contains("shell: bash", StringComparison.Ordinal),
+                    "使用 ${GITHUB_REF_NAME#v} 展开的步骤必须声明 shell: bash: "
+                    + step.Split('\n')[0]);
+            }
+        }
+    }
+
     private static string FindRepositoryFile(params string[] segments)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
