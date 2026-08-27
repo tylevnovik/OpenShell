@@ -54,7 +54,12 @@ public class ClearContentCommandTests
 
         // 文件仍存在（元数据保留）。
         File.Exists(path).Should().BeTrue();
-        File.GetCreationTime(path).Should().Be(createdBefore);
+        if (OperatingSystem.IsWindows())
+        {
+            File.GetCreationTime(path).Should().Be(createdBefore);
+        }
+        // D-705: Linux/macOS 上 .NET 的 GetCreationTime 映射状态变更时间 (ctime)，
+        // 任何内容修改都会更新它；就地截断保持 inode 不变已是正确语义，不要求 ctime 恒定。
     }
 
     [Fact]
