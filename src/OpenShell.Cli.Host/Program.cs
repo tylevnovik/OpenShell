@@ -97,10 +97,13 @@ internal sealed class Program
                     o.TimestampFormat = null;
                 });
                 // 仅限制用户可见的 Console provider；结构化日志 provider 仍保留完整级别。
+                // D-704: 非交互模式提到 Error——平台通知（如非 Windows 的 "RegistryProvider 未注册"）
+                // 属于 Warning，若进控制台会污染 -Command/-File 的干净输出流契约（T-621）。
+                var consoleMinLevel = isNonInteractive ? LogLevel.Error : LogLevel.Warning;
                 l.AddFilter((providerName, _, level) =>
                     providerName is null
                     || !providerName.Contains("ConsoleLoggerProvider", StringComparison.Ordinal)
-                    || level >= LogLevel.Warning);
+                    || level >= consoleMinLevel);
                 // ADR-0031 §1: OpenShellLoggerProvider 通过 DI 注册为 ILoggerProvider (见 ConfigureServices 块),
                 // 由框架在构建 LoggerFactory 时自动解析 (需 ILogStore 注入)。
             })

@@ -820,7 +820,7 @@ public sealed class MainViewModel : ReactiveViewModel
         }
         try
         {
-            var localPath = item.Path.InternalPath.Replace('/', '\\');
+            var localPath = item.Path.InternalPath.Replace('/', System.IO.Path.DirectorySeparatorChar);
             Process.Start(new ProcessStartInfo(localPath) { UseShellExecute = true });
         }
         catch (Exception ex)
@@ -929,7 +929,7 @@ public sealed class MainViewModel : ReactiveViewModel
         }
         try
         {
-            var localPath = item.Path.InternalPath.Replace('/', '\\');
+            var localPath = item.Path.InternalPath.Replace('/', System.IO.Path.DirectorySeparatorChar);
             // Windows: 用 rundll32 shell32.dll,OpenAs_RunDLL 调出"打开方式"对话框
             Process.Start(new ProcessStartInfo
             {
@@ -972,8 +972,8 @@ public sealed class MainViewModel : ReactiveViewModel
         }
         try
         {
-            var targetPath = item.Path.InternalPath.Replace('/', '\\');
-            var currentDir = ActivePane.CurrentLocation.InternalPath.Replace('/', '\\');
+            var targetPath = item.Path.InternalPath.Replace('/', System.IO.Path.DirectorySeparatorChar);
+            var currentDir = ActivePane.CurrentLocation.InternalPath.Replace('/', System.IO.Path.DirectorySeparatorChar);
             var shortcutName = item.Name + ".lnk";
             var shortcutPath = System.IO.Path.Combine(currentDir, shortcutName);
             // 如果快捷方式已存在，追加序号

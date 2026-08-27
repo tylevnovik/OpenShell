@@ -277,7 +277,8 @@ public sealed class FileTrashService : ITrashService
         return ValueTask.CompletedTask;
     }
 
-    private static string ToFsPath(ItemPath path) => path.InternalPath.Replace('/', '\\');
+    // D-700: 与 FileSystemProvider 对齐，使用平台分隔符（内部路径统一为 '/'）。
+    private static string ToFsPath(ItemPath path) => path.InternalPath.Replace('/', Path.DirectorySeparatorChar);
 
     private static string GetFileNameOrDirName(string fsPath)
     {

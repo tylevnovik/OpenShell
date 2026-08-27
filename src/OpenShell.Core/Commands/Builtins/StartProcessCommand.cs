@@ -116,7 +116,10 @@ public sealed class StartProcessCommand : ICommand<StartProcessCommand.Args>
         ChildProcessTracker.AddProcess(proc);
 
         // 立即缓存进程名（进程退出后访问 ProcessName 会抛 InvalidOperationException）。
-        var procName = proc.ProcessName;
+        // D-702: 极快退出的进程（如 echo）可能在读取前已退出，回退到可执行文件名。
+        string procName;
+        try { procName = proc.ProcessName; }
+        catch (InvalidOperationException) { procName = Path.GetFileName(psi.FileName); }
 
         if (args.Wait)
         {
