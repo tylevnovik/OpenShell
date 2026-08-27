@@ -1,7 +1,7 @@
 # GUI View 层架构审计
 
 **日期**: 2026-07-12
-**状态**: 严重问题，需全面重构
+**状态**: 已解决（2026-07-18）——本文列出的 A-300~A-310 已由 `docs/gui-host-tasks.md` T-400~T-450 的 AXAML 重构全部消除：`Views/` 下窗口/面板均已拆分为 `.axaml` + code-behind（`MainWindow.axaml` 175 行 + `MainWindow.axaml.cs` 494 行），语义主题、CompiledBindings、DataTemplate 与 Command 绑定按本文方案落地；仅 `CommandPaletteWindow`/`GlobalSearchWindow`/`QuickLookWindow` 三个弹窗仍为纯 C# 构建（低风险，未列入任务）。本审计保留作历史证据。
 **影响范围**: src/OpenShell.Gui.Host/Views/ 下所有窗口
 
 ---

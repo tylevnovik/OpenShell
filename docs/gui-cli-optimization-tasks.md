@@ -20,7 +20,10 @@
 | T-620 | P0 | D-620/D-621/D-625 | 新增早期 CLI 参数解析、help/version 与 usage | `[x]` | T-600 | `HelpAndVersion_AreSideEffectFree` / `InvalidInvocation_ReturnsUsageError` |
 | T-621 | P1 | D-622/D-624 | 清理 CLI 启动日志、统一 UTF-8 与 stdout/stderr | `[x]` | T-620 | `NonInteractiveOutput_UsesCleanStreams` |
 | T-622 | P1 | D-623 | 非交互执行按错误类别和取消语义返回退出码 | `[x]` | T-620 | `CommandFailure_UsesMappedExitCode` |
-| T-630 | P0 | - | 全量构建、测试、CLI 进程烟测和 GUI 双尺寸截图复验 | `[~]` | T-610~T-622 | 全解决方案 |
+| T-623 | P0 | D-626 | 升级 SSH.NET 至 2026.0.0 消除 NU1903 审计错误 | `[x]` | T-600 | `dotnet build OpenShell.slnx` 0 警告 / 0 错误 + Remote Provider 套件 |
+| T-624 | P0 | D-627 | 非交互模式跳过会话生命周期（检测/加载/抢锁/保存/释放） | `[x]` | T-621 | `ParallelNonInteractiveInvocations_DoNotContendSessionLocks` / `NonInteractiveInvocation_PreservesInFlightSessionLock` |
+| T-625 | P1 | D-628 | 修复 AST 路径字符串绑定数组参数按字符枚举 | `[x]` | T-620 | `ScriptFile_WriteOutput_EmitsWholeStrings` |
+| T-630 | P0 | - | 全量构建、测试、CLI 进程烟测和 GUI 双尺寸截图复验 | `[~]` | T-610~T-625 | 全解决方案 |
 
 ## 变更日志
 
@@ -36,3 +39,9 @@
 - 2026-07-18 T-620 完成：新增无副作用早期参数解析器和稳定 usage/version 渲染；help/version、未知参数、缺失值、互斥模式和非法执行策略在 Host 创建前返回。CLI E2E 30 通过 / 1 跳过 / 0 失败。
 - 2026-07-18 T-621 完成：进程最早期固定无 BOM UTF-8；Console provider 默认只显示 Warning 以上，结构化 provider 保留完整日志；插件成功提示仅在交互模式显示。CLI E2E 32 通过 / 1 跳过 / 0 失败。
 - 2026-07-18 T-622 完成：命令与脚本按本次新增错误调用 `ExitCodes.For`；脚本解析返回 2、命令缺失返回 4、取消返回 7；REPL 自动变量不再受历史错误污染。CLI E2E 34 通过 / 0 跳过 / 0 失败。
+- 2026-08-27 T-630 验收扫描发现 D-626/D-627：SSH.NET 高危漏洞使构建失败；非交互会话锁竞态使全量并行测试 2/2 偶发失败（每次命中不同测试）。新增 T-623/T-624 与两个合规测试（基线确定性失败后修复）。
+- 2026-08-27 T-623 完成：SSH.NET 升级至 2026.0.0（GHSA-q939-rpr3-3284 修复版本），BouncyCastle.Cryptography 随传递依赖下限升至 2.7.0；`dotnet build OpenShell.slnx` 恢复 0 警告 / 0 错误，Remote Provider 套件 94 通过。
+- 2026-08-27 T-624 完成：`Program.cs` 会话初始化与退出保存/释放均以 `isNonInteractive` 门控；一次性调用不再触碰 `default` 锁。`NonInteractiveInvocation_PreservesInFlightSessionLock`（基线失败）与 `ParallelNonInteractiveInvocations_DoNotContendSessionLocks` 通过；全解决方案连跑两遍 0 失败。
+- 2026-08-27 T-630 烟测发现 D-628：脚本文件 `Write-Output` 字符串按字符枚举；新增 T-625 与 `ScriptFile_WriteOutput_EmitsWholeStrings`（基线失败后修复 `Evaluator.ConvertValue`，仅 `char[]` 保留字符展开）。
+- 2026-08-27 T-625 完成：全解决方案 2119 通过 / 2 跳过（仅真实 SFTP）/ 0 失败，无回归。
+- 2026-08-27 T-630 部分完成：构建 0/0、全量测试两遍全绿、CLI 真实进程烟测（version/help/usage/-Command/-File 输出与退出码）与 GUI 启动烟测（稳定 12s）均通过；剩余 1200x800 与 800x500 双尺寸截图复验需人工执行。

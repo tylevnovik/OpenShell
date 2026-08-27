@@ -35,9 +35,10 @@
 
 ### 当前进行中的主题
 
-- **现代语法（.osh）修复**：见 `docs/modern-syntax-audit.md`（审计）+ `docs/modern-syntax-tasks.md`（任务清单）+ `tests/OpenShell.Core.Tests/Parsing/ModernSyntaxComplianceTests.cs`（合规测试）。基线状态：52 通过 / 33 跳过 / 0 失败（T-100~T-113 全部完成后）。
+- **现代语法（.osh）修复**：见 `docs/modern-syntax-audit.md`（审计）+ `docs/modern-syntax-tasks.md`（任务清单）+ `tests/OpenShell.Core.Tests/Parsing/ModernSyntaxComplianceTests.cs`（合规测试）。最新状态（2026-08-27 核实）：107 项合规测试全部通过 / 0 跳过 / 0 失败（原 33 个 `pending T-1xx` Skip 已随任务完成全部解除）。
 - **PowerShell 参考源码借鉴**：见 `docs/ps-ref-reuse-audit.md`（审计）+ `docs/ps-ref-reuse-tasks.md`（任务清单）。审计结论：完全复用不可行（PS parser 41,701 行强耦合 SMA 子系统），采用「借鉴重写」策略。A 类 3 文件可直接搬运，B 类 7 文件可借鉴重写，C 类 8 文件不可复用。T-100~T-113 全部完成：CharTraits 搬运、SourceSpan offset 体系、ExpandableString 分层解析（`$(expr)` 子表达式插值）、here-string 转义/插值、类型字面量（`[int[]]`/`List[int]`）、数字组合后缀（`uy`/`ul`/`us`）、`$(...)` 语句语义、栈式作用域语义检查（保留字/重复参数）。许可证：PS 源码 MIT，借鉴文件须保留版权声明 + ThirdPartyNotices 列明。
-- **脚本实例端到端测试体系**：见 `docs/script-e2e-audit.md`（审计）+ `docs/script-e2e-tasks.md`（任务清单）+ `tests/OpenShell.Core.Tests/ScriptE2E/ScriptE2EComplianceTests.cs`（合规测试）。T-200~T-260 全部完成：ModuleRegistry DI 接线（`AddScriptModules()`）、TestHostBuilder 注册 IExecutionPolicyService、Tokenizer 注册 `import`/`from`/`as` 关键字、多行 `#lang ps1 { }` 块支持、ParseTry 吞语句修复、相对 import 路径解析（D-206）、ParsePostfixExpr LParen 参数丢弃修复（D-207）、EvaluateMember 空参数列表误判修复（D-208）、InvokeMethod 方法重载支持（D-209）。合规测试 20 通过 / 0 跳过 / 0 失败，全量 1972 通过 / 7 跳过 / 0 失败。
+- **脚本实例端到端测试体系**：见 `docs/script-e2e-audit.md`（审计）+ `docs/script-e2e-tasks.md`（任务清单）+ `tests/OpenShell.Core.Tests/ScriptE2E/ScriptE2EComplianceTests.cs`（合规测试）。T-200~T-260 全部完成：ModuleRegistry DI 接线（`AddScriptModules()`）、TestHostBuilder 注册 IExecutionPolicyService、Tokenizer 注册 `import`/`from`/`as` 关键字、多行 `#lang ps1 { }` 块支持、ParseTry 吞语句修复、相对 import 路径解析（D-206）、ParsePostfixExpr LParen 参数丢弃修复（D-207）、EvaluateMember 空参数列表误判修复（D-208）、InvokeMethod 方法重载支持（D-209）。合规测试全部通过 / 0 跳过 / 0 失败，全量 2119 通过 / 2 跳过（仅真实 SFTP 基础设施）/ 0 失败（2026-08-27 实测）。
+- **GUI 与 CLI 产品化优化**：见 `docs/gui-cli-optimization-audit.md`（审计）+ `docs/gui-cli-optimization-tasks.md`（任务清单）+ `GuiCliOptimizationGuiComplianceTests.cs` / `GuiCliOptimizationCliComplianceTests.cs`（合规测试）。T-600~T-625 完成：语义主题、工作区列折叠、命令/标签栏、文件状态、会话标签恢复、可访问性、CLI 早期参数解析、干净流与退出码、SSH.NET 2026.0.0 安全升级（D-626）、非交互会话生命周期隔离（D-627）、AST 字符串数组绑定修复（D-628）。剩余：T-630 的 1200x800 / 800x500 双尺寸真实窗口截图复验（人工）。关联主题：project-stability 的 T-591 最终验收已于 2026-08-27 通过（见 `docs/project-stability-audit.md` §六）。
 
 ---
 

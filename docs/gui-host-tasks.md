@@ -160,7 +160,7 @@
 - [x] 标签页带关闭按钮（×）
 - [x] 测试：`Multi_Tab_Properties_And_Commands` + `New_Tab_Creates_Tab_And_Switches` + `Close_Tab_Removes_Tab_Keeps_At_Least_One` + `Browser_Tab_Title_Updates_With_Location` + `Tab_Control_Field_Exists` + `Right_Click_Selects_Item` 通过
 - [ ] tab 拖出创建新 `MainWindow`（未来增强）
-- [ ] tab 状态持久化（未来增强）
+- [x] tab 状态持久化（2026-08-27 核实：提交 7113274 已实现 `SessionTabsService` 加载/恢复、防抖保存与退出落盘，`Tabs_RestoreAndPersistThroughSessionService` 通过；补记状态）
 
 ### T-441 地址栏可编辑（F-11）
 - [x] 面包屑 + `TextBox` 双模式切换
