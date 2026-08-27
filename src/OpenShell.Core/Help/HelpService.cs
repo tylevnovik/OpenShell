@@ -34,6 +34,7 @@ public sealed class HelpService : IHelpService
         "about_formatting",
         "about_undo",
         "about_remote",
+        "about_security",
     };
 
     private readonly ICommandRegistry _commands;
