@@ -44,12 +44,12 @@
     <PackageVersion Include="Tomlyn" Version="0.17.0" />
 
     <!-- Remote providers (ADR-0019): SSH.NET 用于 SFTP。 -->
-    <!-- 注: SSH.NET 已采用日历版本号 (2025.x)，不再有 16.x 分支；2025.1.0 支持 net8.0。 -->
-    <PackageVersion Include="SSH.NET" Version="2025.1.0" />
+    <!-- 注: SSH.NET 已采用日历版本号；2026.0.0 为 GHSA-q939-rpr3-3284 (高危) 的修复版本，仍支持 net8.0。Per D-626/T-623。 -->
+    <PackageVersion Include="SSH.NET" Version="2026.0.0" />
 
     <!-- ADR-0039 §8: Ed25519 签名校验 (BouncyCastle 提供 Ed25519 支持, .NET 8 BCL 不含)。
-         版本 >= 2.6.2 以满足 SSH.NET 2025.1.0 的传递依赖 (NU1109)。 -->
-    <PackageVersion Include="BouncyCastle.Cryptography" Version="2.6.2" />
+         版本 >= 2.7.0 以满足 SSH.NET 2026.0.0 的传递依赖 (NU1109)。 -->
+    <PackageVersion Include="BouncyCastle.Cryptography" Version="2.7.0" />
 
     <!-- ADR-0031 §5-9: M3+ 可观测性栈 (Serilog + OpenTelemetry)。 -->
     <!-- Serilog 结构化日志: 核心 + Hosting 集成 + 文件/控制台 sink。 -->
