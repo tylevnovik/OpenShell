@@ -42,4 +42,4 @@
 ## 五、完成标准达成情况
 
 - ✅ 本地（Windows + Linux）全量测试全绿，仅保留 2 个真实 SFTP Skip。
-- ⏳ CI 三平台（含 macOS）全绿——以推送后 CI 运行为准。
+- ✅ CI 三平台（含 macOS）全绿——run 33083253004：ubuntu 1m59s / macos 2m37s / windows 4m17s，仓库历史首次。
