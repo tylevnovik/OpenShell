@@ -197,11 +197,17 @@ public class WaitProcessCommandTests
     }
 
     /// <summary>启动一个短时进程（很快退出）。</summary>
+    /// <remarks>
+    /// D-702: Linux 上 <c>echo</c> 亚毫秒退出，随后读取 <see cref="Process.ProcessName"/> 会抛
+    /// "Process has exited"。改为把系统 <c>sleep</c> 复制成唯一命名的临时可执行文件再启动：
+    /// 进程存活约 1 秒可安全读取进程名，唯一名避免与运行机上其他进程重名；
+    /// 读到名字后立即删除副本（Unix 允许删除仍在运行的可执行文件）。
+    /// </remarks>
     private static (Process Proc, string Name) StartShortProcess()
     {
         var psi = new ProcessStartInfo
         {
-            FileName = OperatingSystem.IsWindows() ? "cmd.exe" : "echo",
+            FileName = OperatingSystem.IsWindows() ? "cmd.exe" : CreateUniqueSleepBinary(),
             UseShellExecute = false,
             CreateNoWindow = true,
         };
@@ -213,25 +219,46 @@ public class WaitProcessCommandTests
         }
         else
         {
-            psi.ArgumentList.Add("hi");
+            psi.ArgumentList.Add("1");
         }
         var proc = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start test process");
         // 在进程退出前获取 ProcessName（进程退出后访问 ProcessName 会抛 InvalidOperationException）。
         var name = proc.ProcessName;
-        Thread.Sleep(100);
+        if (!OperatingSystem.IsWindows())
+        {
+            try { File.Delete(psi.FileName); } catch { /* best-effort */ }
+        }
         return (proc, name);
+    }
+
+    /// <summary>把系统 sleep 复制为唯一命名的临时可执行文件并返回其路径。Per D-702.</summary>
+    private static string CreateUniqueSleepBinary()
+    {
+        var source = File.Exists("/bin/sleep") ? "/bin/sleep" : "/usr/bin/sleep";
+        var dest = Path.Combine(
+            Path.GetTempPath(),
+            $"osh-wait-{Guid.NewGuid():N}-sleep");
+        File.Copy(source, dest);
+        if (!OperatingSystem.IsWindows())
+        {
+            File.SetUnixFileMode(dest,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+        return dest;
     }
 
     /// <summary>启动一个长期进程（存活 60s）。</summary>
     /// <remarks>
     /// 直接使用 <c>ping.exe</c>（而非 <c>cmd.exe /c ping</c>），使进程名为 <c>ping</c> 而非 <c>cmd</c>。
     /// 避免 StopProcessCommandTests.Execute_ByName 并行执行时按名 <c>cmd</c> 杀掉本进程导致 flaky 失败。
+    /// D-702: Unix 同理——普通 <c>sleep</c> 会被并行的 Stop-Process -Name sleep 误杀，
+    /// 改用唯一命名的 sleep 副本。
     /// </remarks>
     private static (Process Proc, string Name) StartLongProcess()
     {
         var psi = new ProcessStartInfo
         {
-            FileName = OperatingSystem.IsWindows() ? "ping.exe" : "sleep",
+            FileName = OperatingSystem.IsWindows() ? "ping.exe" : CreateUniqueSleepBinary(),
             UseShellExecute = false,
             CreateNoWindow = true,
         };
@@ -246,8 +273,13 @@ public class WaitProcessCommandTests
             psi.ArgumentList.Add("60");
         }
         var proc = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start test process");
+        var name = proc.ProcessName;
+        if (!OperatingSystem.IsWindows())
+        {
+            try { File.Delete(psi.FileName); } catch { /* best-effort */ }
+        }
         Thread.Sleep(200);
-        return (proc, proc.ProcessName);
+        return (proc, name);
     }
 
     private static CommandContext TestCtx()

@@ -29,7 +29,8 @@ public sealed class NamedPipeIpcChannelTests
         var id = Guid.NewGuid().ToString("N");
         if (OperatingSystem.IsWindows())
             return $@"\\.\pipe\openshell-test-{id}";
-        return System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"openshell-test-{id}.sock");
+        // macOS UDS 路径上限 104 字符，/var/folders/.../T/ 前缀较长，保持短命名留出余量。
+        return System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"osh-{id}.sock");
     }
 
     /// <summary>安全停止通道: 带 2 秒超时, 超时不等 (避免 StopAsync 永久阻塞)。</summary>
@@ -105,6 +106,9 @@ public sealed class NamedPipeIpcChannelTests
     [Fact]
     public async Task Raw_NamedPipe_ServerCreatedInTaskRun_Connects()
     {
+        // D-703: 本用例直连 "\\.\pipe\" 原生 Windows 管道，仅 Windows 有意义（Unix 走 UDS）。
+        if (!OperatingSystem.IsWindows()) return;
+
         // 变体: NamedPipeServerStream 在 Task.Run 中创建 (模拟 NamedPipeIpcChannel.StartAsync 的行为)。
         // 确认是否是 Task.Run 中创建导致客户端连不上。
         var pipeName = @"\\.\pipe\openshell-raw2-" + Guid.NewGuid().ToString("N");
@@ -138,6 +142,9 @@ public sealed class NamedPipeIpcChannelTests
     [Fact]
     public async Task Raw_NamedPipe_BasicConnectivity_EnvironmentCheck()
     {
+        // D-703: 本用例直连 "\\.\pipe\" 原生 Windows 管道，仅 Windows 有意义（Unix 走 UDS）。
+        if (!OperatingSystem.IsWindows()) return;
+
         // 环境检查: 直接用 NamedPipeServerStream + NamedPipeClientStream 验证 Windows NamedPipe IO 能工作。
         // 若此测试也卡/失败, 说明是环境问题 (而非 NamedPipeIpcChannel 的问题), 后续真实连接测试应 Skip。
         var pipeName = @"\\.\pipe\openshell-raw-" + Guid.NewGuid().ToString("N");
@@ -325,14 +332,18 @@ public sealed class NamedPipeIpcChannelTests
     [Fact]
     public async Task ConnectAsync_WhenServerNotListening_ThrowsTimeoutOrIoError()
     {
-        // 客户端连接不存在的服务端应超时或抛 IOException (而非永久阻塞)。
+        // 客户端连接不存在的服务端必须在取消窗口内快速失败（而非永久阻塞）。
+        // D-703: 失败形态随平台不同——Windows 为取消/超时，Linux 为 SocketException，
+        // macOS 可能为 IOException；三者均满足"快速失败"契约。
         var endpoint = GetUniqueEndpoint();
         var client = new NamedPipeIpcChannel(endpoint, HostKind.Gui);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-        var act = () => client.ConnectAsync(cts.Token);
-        await act.Should().ThrowAsync<OperationCanceledException>(
-            "connecting to a non-listening endpoint must fail within the cancellation token window");
+        var ex = await Record.ExceptionAsync(() => client.ConnectAsync(cts.Token));
+
+        ex.Should().NotBeNull("connecting to a non-listening endpoint must fail within the cancellation token window");
+        (ex is OperationCanceledException or IOException or System.Net.Sockets.SocketException).Should()
+            .BeTrue($"failure must be cancellation/timeout or an IO/socket error, got: {ex.GetType().Name}");
 
         await StopAsyncSafe(client);
     }

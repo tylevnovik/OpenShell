@@ -131,11 +131,13 @@ public static class CliProcessRunner
         => RunAsync(new[] { "-File", scriptPath }, workingDir, timeoutMs, openShellHome: openShellHome);
 
     /// <summary>
-    /// 定位 openshell-cli.exe。CLI 项目输出到 artifacts/bin/OpenShell/{Configuration}/openshell-cli.exe。
+    /// 定位 openshell-cli 可执行文件。CLI 项目输出到 artifacts/bin/OpenShell/{Configuration}/。
+    /// Windows 为 openshell-cli.exe，Linux/macOS 为无扩展名 apphost（D-701）。
     /// 从测试程序集目录向上搜索 artifacts 目录。
     /// </summary>
     private static string ResolveCliExePath()
     {
+        var exeName = OperatingSystem.IsWindows() ? "openshell-cli.exe" : "openshell-cli";
         var dir = AppContext.BaseDirectory;
         for (int i = 0; i < 8; i++)
         {
@@ -143,13 +145,13 @@ public static class CliProcessRunner
             var candidate = Path.Combine(dir, "artifacts", "bin", "OpenShell");
             if (Directory.Exists(candidate))
             {
-                var debugExe = Path.Combine(candidate, "Debug", "openshell-cli.exe");
+                var debugExe = Path.Combine(candidate, "Debug", exeName);
                 if (File.Exists(debugExe)) return debugExe;
-                var releaseExe = Path.Combine(candidate, "Release", "openshell-cli.exe");
+                var releaseExe = Path.Combine(candidate, "Release", exeName);
                 if (File.Exists(releaseExe)) return releaseExe;
-                // 目录存在但 exe 未找到，抛出明确错误。
+                // 目录存在但可执行文件未找到，抛出明确错误。
                 throw new FileNotFoundException(
-                    $"artifacts/bin/OpenShell/ exists but openshell-cli.exe not found in Debug or Release. " +
+                    $"artifacts/bin/OpenShell/ exists but {exeName} not found in Debug or Release. " +
                     $"Run 'dotnet build OpenShell.slnx' first.");
             }
             var parent = Directory.GetParent(dir);
@@ -160,11 +162,11 @@ public static class CliProcessRunner
         // 退路：基于 csproj 位置推算。
         var fallback = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory, "..", "..", "..", "..",
-            "artifacts", "bin", "OpenShell", "Debug", "openshell-cli.exe"));
+            "artifacts", "bin", "OpenShell", "Debug", exeName));
         if (File.Exists(fallback)) return fallback;
 
         throw new FileNotFoundException(
-            $"openshell-cli.exe not found. Searched from {AppContext.BaseDirectory}. " +
+            $"{exeName} not found. Searched from {AppContext.BaseDirectory}. " +
             $"Run 'dotnet build OpenShell.slnx' first.");
     }
 }

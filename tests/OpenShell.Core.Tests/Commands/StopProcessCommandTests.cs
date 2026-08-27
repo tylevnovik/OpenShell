@@ -241,12 +241,17 @@ public class StopProcessCommandTests
     }
 
     /// <summary>启动一个长期运行的测试进程，返回 (Process, Name)。</summary>
+    /// <remarks>
+    /// D-702: Unix 下若直接用系统 <c>sleep</c>，本测试的 <c>Stop-Process -Name sleep</c>
+    /// 会杀掉机器上所有名为 sleep 的进程——包括并行运行的其他测试（如 Wait-Process）
+    /// 启动的 sleep，造成跨测试 flaky。改用唯一命名的 sleep 副本，按名终止只命中本进程。
+    /// </remarks>
     private static (Process Proc, string Name) StartTestProcess()
     {
         var psi = new ProcessStartInfo
         {
-            // 跨平台：在 Windows 用 cmd /c ping localhost; Unix 用 sleep 60。
-            FileName = OperatingSystem.IsWindows() ? "cmd.exe" : "sleep",
+            // 跨平台：在 Windows 用 cmd /c ping localhost; Unix 用唯一命名的 sleep 副本。
+            FileName = OperatingSystem.IsWindows() ? "cmd.exe" : CreateUniqueSleepBinary(),
             UseShellExecute = false,
             CreateNoWindow = true,
         };
@@ -264,9 +269,30 @@ public class StopProcessCommandTests
         }
 
         var proc = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start test process");
+        var name = proc.ProcessName;
+        if (!OperatingSystem.IsWindows())
+        {
+            try { File.Delete(psi.FileName); } catch { /* best-effort */ }
+        }
         // 等待进程启动（确保 OS 已注册）。
         Thread.Sleep(200);
-        return (proc, proc.ProcessName);
+        return (proc, name);
+    }
+
+    /// <summary>把系统 sleep 复制为唯一命名的临时可执行文件并返回其路径。Per D-702.</summary>
+    private static string CreateUniqueSleepBinary()
+    {
+        var source = File.Exists("/bin/sleep") ? "/bin/sleep" : "/usr/bin/sleep";
+        var dest = Path.Combine(
+            Path.GetTempPath(),
+            $"osh-stop-{Guid.NewGuid():N}-sleep");
+        File.Copy(source, dest);
+        if (!OperatingSystem.IsWindows())
+        {
+            File.SetUnixFileMode(dest,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+        return dest;
     }
 
     private static CommandContext TestCtx()
