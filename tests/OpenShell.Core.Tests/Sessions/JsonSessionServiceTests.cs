@@ -352,6 +352,53 @@ public class JsonSessionServiceTests
         mode.Should().Be(UnixFileMode.UserRead | UnixFileMode.UserWrite);
     }
 
+    [Fact]
+    public async Task ConcurrentSaves_NeverCorruptSessionFile()
+    {
+        // D-510: 会话 JSON 必须原子替换。非原子的覆盖写会让并发读者看到撕裂内容。
+        using var dir = new TempDir();
+        var svc = new JsonSessionService(dir.FullPath);
+        await svc.LoadOrCreateAsync("stress");
+        var path = GetSessionFilePath(dir, "stress");
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var reader = Task.Run(async () =>
+        {
+            while (!cts.IsCancellationRequested)
+            {
+                if (!File.Exists(path)) continue;
+                string text;
+                try
+                {
+                    text = await File.ReadAllTextAsync(path);
+                }
+                catch (IOException)
+                {
+                    continue; // 文件瞬时被占用不属于内容损坏。
+                }
+                using var doc = JsonDocument.Parse(text);
+            }
+        });
+
+        var writers = Enumerable.Range(0, 8)
+            .Select(_ => Task.Run(async () =>
+            {
+                for (var i = 0; i < 50; i++)
+                {
+                    svc.UpdateCurrent(svc.Current! with { LastActive = DateTimeOffset.UtcNow });
+                    await svc.SaveAsync();
+                }
+            }))
+            .ToArray();
+
+        await Task.WhenAll(writers);
+        cts.Cancel();
+        await reader;
+
+        Directory.GetFiles(Path.Combine(dir.FullPath, "sessions"), "*.tmp")
+            .Should().BeEmpty("保存完成后不得残留临时文件");
+    }
+
     private static string GetSessionFilePath(TempDir dir, string name) =>
         Path.Combine(dir.FullPath, "sessions", name + ".json");
 
