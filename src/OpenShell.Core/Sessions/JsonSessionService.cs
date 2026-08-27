@@ -230,16 +230,21 @@ public sealed class JsonSessionService : ISessionService
 
     private static async Task WriteSessionAsync(string path, Session session, CancellationToken ct)
     {
+        // D-510: 原子替换——先写唯一命名的临时文件再 Move 覆盖目标，
+        // 并发读者（另一宿主/自动保存）永远不会看到撕裂的中间内容。
+        var tmpPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
             var dir = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
             var text = JsonSerializer.Serialize(session, JsonOptions);
-            await File.WriteAllTextAsync(path, text, ct).ConfigureAwait(false);
-            TrySetUserOnlyPermissions(path);
+            await File.WriteAllTextAsync(tmpPath, text, ct).ConfigureAwait(false);
+            TrySetUserOnlyPermissions(tmpPath);
+            File.Move(tmpPath, path, overwrite: true);
         }
         catch (Exception ex)
         {
+            TryDelete(tmpPath);
             Console.Error.WriteLine($"[sessions] failed to write session file '{path}': {ex.Message}");
         }
     }
