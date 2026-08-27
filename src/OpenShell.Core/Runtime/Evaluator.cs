@@ -2547,6 +2547,15 @@ public sealed class Evaluator
         if (targetType.IsArray)
         {
             var elemType = targetType.GetElementType()!;
+            // D-628: string 实现 IEnumerable (IEnumerable<char>)，绑定到非 char 数组参数时
+            // 若逐字符枚举会把 "hello" 拆成 5 项；按 PowerShell 语义应包成单元素数组。
+            // 仅 char[] 目标保留按字符展开 ([char[]]"abc" → 'a','b','c')。
+            if (value is string str && elemType != typeof(char))
+            {
+                var single = Array.CreateInstance(elemType, 1);
+                single.SetValue(ConvertValue(str, elemType), 0);
+                return single;
+            }
             if (value is IEnumerable e)
             {
                 var list = new List<object?>();

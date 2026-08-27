@@ -425,27 +425,33 @@ internal sealed class Program
 
         // ADR-0034: 会话加载与崩溃检测。启动时加载或创建会话 + 检测上次崩溃 + AcquireLock。
         // 默认会话名 "default"; --session <name> 指定其他会话。
+        // D-627: 非交互模式 (-Command/-File) 为一次性执行，CLI 宿主不把会话状态应用回运行时，
+        // 故完全跳过会话生命周期 (检测/加载/抢锁/保存/释放)：避免会话诊断污染 stderr (T-621 干净流契约)、
+        // 避免并行一次性调用互相竞争 "default" 锁、避免覆盖或删除在途 REPL/GUI 持有的锁文件。
         var sessionService = host.Services.GetRequiredService<ISessionService>();
         var activeSessionName = sessionName ?? "default";
-        try
+        if (!isNonInteractive)
         {
-            var crashResult = await sessionService.DetectCrashAsync(activeSessionName);
-            if (crashResult.LockExists && !crashResult.IsProcessAlive)
+            try
             {
-                Console.Error.WriteLine(
-                    T("tui.sessions.crash", activeSessionName, (object)(crashResult.Pid ?? 0), crashResult.MachineName ?? string.Empty));
+                var crashResult = await sessionService.DetectCrashAsync(activeSessionName);
+                if (crashResult.LockExists && !crashResult.IsProcessAlive)
+                {
+                    Console.Error.WriteLine(
+                        T("tui.sessions.crash", activeSessionName, (object)(crashResult.Pid ?? 0), crashResult.MachineName ?? string.Empty));
+                }
+                else if (crashResult.LockExists && crashResult.IsProcessAlive)
+                {
+                    Console.Error.WriteLine(
+                        T("tui.sessions.running", activeSessionName, (object)(crashResult.Pid ?? 0)));
+                }
+                await sessionService.LoadOrCreateAsync(activeSessionName);
+                await sessionService.AcquireLockAsync(activeSessionName);
             }
-            else if (crashResult.LockExists && crashResult.IsProcessAlive)
+            catch (Exception ex)
             {
-                Console.Error.WriteLine(
-                    T("tui.sessions.running", activeSessionName, (object)(crashResult.Pid ?? 0)));
+                Console.Error.WriteLine(T("tui.sessions.initFailed", activeSessionName, ex.Message));
             }
-            await sessionService.LoadOrCreateAsync(activeSessionName);
-            await sessionService.AcquireLockAsync(activeSessionName);
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine(T("tui.sessions.initFailed", activeSessionName, ex.Message));
         }
 
         // IPC 服务端模式: --ipc-server 时在 REPL 之前后台启动 IPC 通道。
@@ -497,14 +503,18 @@ internal sealed class Program
         finally
         {
             // ADR-0034: 退出时持久化会话状态 + 释放锁 (best-effort, 不阻塞 host 关闭)。
-            try
+            // D-627: 非交互模式未加载会话，跳过保存与释放（避免误删在途锁与 stderr 污染）。
+            if (!isNonInteractive)
             {
-                await sessionService.SaveAsync();
-                await sessionService.ReleaseLockAsync(activeSessionName);
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine(T("tui.sessions.saveFailed", activeSessionName, ex.Message));
+                try
+                {
+                    await sessionService.SaveAsync();
+                    await sessionService.ReleaseLockAsync(activeSessionName);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine(T("tui.sessions.saveFailed", activeSessionName, ex.Message));
+                }
             }
             // 退出时停止 IPC 通道与事件桥 (可重入, 安全)。
             if (eventBridge is not null)
