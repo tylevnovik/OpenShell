@@ -26,6 +26,9 @@
 | D-505 | P0 | CI 使用不支持 `.slnx` 的 SDK | `.github/workflows/ci.yml` 安装 .NET 8.0.x；SDK 8.0.404 本地复现 `MSB4068`，主 CI 无法进入编译阶段。 |
 | D-506 | P0 | GUI 直接显示 i18n 资源键 | 真实窗口截图中标题、搜索框、列头和状态栏显示 `gui.*`；XAML 重构后 `MainWindow` 未调用翻译流程，且使用了 `gui.list.*`、`gui.search.placeholder` 等不存在键。 |
 | D-507 | P0 | GUI 文件列表未绑定活动标签页 | App 在窗口挂载前设置 `DataContext`，此时 `_mainFileListView` 尚未由 `WireUpControls()` 赋值；挂载后未补绑，导致状态栏有项目计数但列表空白，并出现错误状态条。 |
+| D-508 | P1 | 发布流水线与 CI 的 SDK 不一致且从未验证 | 2026-08-27 深度复查发现：仓库无任何 tag，`release.yml` 从未运行；两处 `dotnet-version` 仍为 `8.0.x`（ci.yml 已在 T-505 升级 10.0.x）。且 Publish/Pack 步骤未指定 `shell: bash`，Windows runner 默认 pwsh 无法展开 `${GITHUB_REF_NAME#v}`，win-x64/win-arm64 的 `-p:Version` 会落空。 |
+| D-509 | P1 | CLI 进程级测试直接读写真实用户配置目录 | 2026-08-27 深度复查发现：`OpenShellPaths.Root` 固定为 `~/.openshell` 且无覆盖口；E2E 测试启动的真实 CLI 会读写测试者本人的会话、历史与日志。D-627 锁竞态即由此放大，且测试与真实用户数据互相污染。需要 `OPENSHELL_HOME` 覆盖口并在 `CliProcessRunner` 默认隔离。 |
+| D-510 | P1 | 会话 JSON 非原子写且锁为 advisory | 2026-08-27 深度复查发现：`JsonSessionService.WriteSessionAsync` 直接 `File.WriteAllTextAsync` 覆盖目标文件（无临时文件+替换），GUI 与交互 REPL 共享 `default` 会话、锁在警告后被覆盖（D-627 场景），并发保存可能产生撕裂/损坏的 JSON。 |
 
 ## 三、修复策略
 
@@ -57,3 +60,13 @@
 - CLI 真实进程烟测：`--version` / `--help` 退出码 0；未知参数退出码 3 且 stderr 给出 usage；`-Command` 成功退出码 0、命令未找到退出码 4；`-File` 脚本执行退出码 0。
 - GUI 烟测：`dotnet run --project src/OpenShell.Gui.Host` 启动，窗口进程稳定运行 12 秒无异常后正常终止。
 - 验收中发现并修复的新缺陷均已回写 `docs/gui-cli-optimization-audit.md`（D-626/D-627/D-628，对应 T-623/T-624/T-625）。
+
+## 七、深度复查补记（D-508~D-510，2026-08-27）
+
+T-591 关闭后的结构性复查发现三个非阻塞但真实的稳定性隐患，均按基线测试先行流程修复：
+
+- **T-508（D-508）完成**：`release.yml` 两处 SDK 对齐 `10.0.x`；Publish CLI / Publish GUI / Pack 步骤显式 `shell: bash`，消除 Windows runner 默认 pwsh 无法展开 `${GITHUB_REF_NAME#v}` 的问题。合规测试 `Release_UsesCiAlignedSdkAndBashExpansion` 按步骤块机械验证；本地 `dotnet publish -r win-x64 --self-contained` 实测产出可运行（`--version` 退出码 0）。
+- **T-509（D-509）完成**：`OpenShellPaths.Root` 支持 `OPENSHELL_HOME` 覆盖（进程启动时读取一次）；`CliProcessRunner` 默认给每个子进程注入一次性临时 `OPENSHELL_HOME`，E2E 测试不再读写真实 `~/.openshell`。发布版实测：日志、journal、缓存、索引全部落入隔离目录。合规测试 `CliProcessIsolation_RespectsOpenShellHome` 通过。
+- **T-510（D-510）完成**：`JsonSessionService.WriteSessionAsync` 改为唯一命名临时文件 + `File.Move(overwrite)` 原子替换，失败路径清理临时文件；8 写者 × 50 次并发保存 + 持续校验读者的合规测试 `ConcurrentSaves_NeverCorruptSessionFile` 通过，无 `.tmp` 残留。
+- 修复后全解决方案：**2120 通过 / 2 跳过（仅真实 SFTP）/ 0 失败**；构建 0 警告 / 0 错误。
+- 遗留（不属本轮）：打 tag 触发真实发布流水线端到端验证（需推送 tag，属发布动作）；README/产品文档缺失；安全存根的产品级标注。
