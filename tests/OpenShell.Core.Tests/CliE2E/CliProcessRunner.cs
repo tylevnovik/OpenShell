@@ -30,13 +30,19 @@ public static class CliProcessRunner
     /// <param name="args">CLI 参数（如 ["-Command", "cd ..; pwd"] 或 ["-File", "script.osh"]）。</param>
     /// <param name="workingDir">工作目录（TestDrive 等价物，用 TempDir.FullPath）。</param>
     /// <param="timeoutMs">超时毫秒（默认 30s，等价 PS 参考的 15s 但给更宽裕）。</param>
+    /// <param name="openShellHome">
+    /// 子进程持久化根（OPENSHELL_HOME，D-509）。未指定时自动创建一次性临时目录，
+    /// 避免测试读写真实用户 ~/.openshell（会话/历史/日志）。
+    /// </param>
     /// <returns>stdout / stderr / exit code。</returns>
     public static async Task<CliProcessResult> RunAsync(
         string[] args,
         string? workingDir = null,
         int timeoutMs = 30000,
-        string? standardInput = null)
+        string? standardInput = null,
+        string? openShellHome = null)
     {
+        using var isolatedHome = openShellHome is null ? new TempDir() : null;
         var exePath = ResolveCliExePath();
         var psi = new ProcessStartInfo
         {
@@ -51,6 +57,7 @@ public static class CliProcessRunner
             // --noprofile 避免 profile 副作用干扰测试（等价 pwsh -noprofile）。
             // -ExecutionPolicy Bypass 避免执行策略拦截（测试环境）。
         };
+        psi.Environment["OPENSHELL_HOME"] = openShellHome ?? isolatedHome!.FullPath;
 
         // 始终加 --noprofile（等价 PS 参考的 pwsh -noprofile），避免 profile 副作用。
         psi.ArgumentList.Add("--noprofile");
@@ -111,15 +118,17 @@ public static class CliProcessRunner
     public static Task<CliProcessResult> RunCommandAsync(
         string command,
         string? workingDir = null,
-        int timeoutMs = 30000)
-        => RunAsync(new[] { "-Command", command }, workingDir, timeoutMs);
+        int timeoutMs = 30000,
+        string? openShellHome = null)
+        => RunAsync(new[] { "-Command", command }, workingDir, timeoutMs, openShellHome: openShellHome);
 
     /// <summary>便捷重载：执行 -File 脚本文件。</summary>
     public static Task<CliProcessResult> RunFileAsync(
         string scriptPath,
         string? workingDir = null,
-        int timeoutMs = 30000)
-        => RunAsync(new[] { "-File", scriptPath }, workingDir, timeoutMs);
+        int timeoutMs = 30000,
+        string? openShellHome = null)
+        => RunAsync(new[] { "-File", scriptPath }, workingDir, timeoutMs, openShellHome: openShellHome);
 
     /// <summary>
     /// 定位 openshell-cli.exe。CLI 项目输出到 artifacts/bin/OpenShell/{Configuration}/openshell-cli.exe。

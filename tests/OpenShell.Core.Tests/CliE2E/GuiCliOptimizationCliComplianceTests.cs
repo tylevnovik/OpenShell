@@ -168,25 +168,34 @@ public sealed class GuiCliOptimizationCliComplianceTests
     {
         // D-627: 已有存活进程持有 "default" 锁时，一次性执行不得覆盖或删除该锁，
         // 也不得把会话诊断写入 stderr。
-        var lockPath = Path.Combine(OpenShell.OpenShellPaths.SessionsDir, "default.lock");
-        Directory.CreateDirectory(OpenShell.OpenShellPaths.SessionsDir);
-        var backup = File.Exists(lockPath) ? File.ReadAllText(lockPath) : null;
+        using var home = new TempDir();
+        var lockPath = Path.Combine(home.FullPath, "sessions", "default.lock");
+        Directory.CreateDirectory(Path.Combine(home.FullPath, "sessions"));
         var sentinel = $"{{\"pid\":{Environment.ProcessId},\"started\":\"2026-01-01T00:00:00Z\",\"machine\":\"test\"}}";
-        try
-        {
-            File.WriteAllText(lockPath, sentinel);
+        File.WriteAllText(lockPath, sentinel);
 
-            var result = await CliProcessRunner.RunCommandAsync("pwd");
+        var result = await CliProcessRunner.RunCommandAsync("pwd", openShellHome: home.FullPath);
 
-            result.ExitCode.Should().Be(ExitCodes.Success);
-            result.Stderr.Should().BeNullOrWhiteSpace();
-            File.Exists(lockPath).Should().BeTrue("非交互调用不得删除在途会话锁");
-            File.ReadAllText(lockPath).Should().Be(sentinel, "非交互调用不得覆盖在途会话锁");
-        }
-        finally
-        {
-            if (backup is not null) File.WriteAllText(lockPath, backup);
-            else if (File.Exists(lockPath)) File.Delete(lockPath);
-        }
+        result.ExitCode.Should().Be(ExitCodes.Success);
+        result.Stderr.Should().BeNullOrWhiteSpace();
+        File.Exists(lockPath).Should().BeTrue("非交互调用不得删除在途会话锁");
+        File.ReadAllText(lockPath).Should().Be(sentinel, "非交互调用不得覆盖在途会话锁");
+    }
+
+    [Fact]
+    public async Task CliProcessIsolation_RespectsOpenShellHome()
+    {
+        // D-509: OPENSHELL_HOME 必须重定向全部持久化状态，测试不得触碰真实 ~/.openshell。
+        using var home = new TempDir();
+
+        var result = await CliProcessRunner.RunAsync(
+            Array.Empty<string>(),
+            timeoutMs: 15000,
+            standardInput: "exit" + Environment.NewLine,
+            openShellHome: home.FullPath);
+
+        result.ExitCode.Should().Be(ExitCodes.Success);
+        File.Exists(Path.Combine(home.FullPath, "sessions", "default.json"))
+            .Should().BeTrue("交互退出时会话应持久化到 OPENSHELL_HOME/sessions/");
     }
 }

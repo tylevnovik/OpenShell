@@ -2,15 +2,26 @@ namespace OpenShell;
 
 /// <summary>
 /// 统一的持久化路径助手。Per ADR-0022 §1.
-/// 所有持久化数据位于 <c>~/.openshell/</c> 下，跨平台通过 <c>Environment.SpecialFolder.UserProfile</c> 解析。
+/// 所有持久化数据默认位于 <c>~/.openshell/</c> 下，跨平台通过 <c>Environment.SpecialFolder.UserProfile</c> 解析。
+/// 设置 <c>OPENSHELL_HOME</c> 环境变量可将整个持久化根重定向到指定目录（测试隔离 / 便携安装）。Per D-509.
 /// </summary>
 public static class OpenShellPaths
 {
-    /// <summary>根目录 <c>~/.openshell</c>。</summary>
-    public static string Root { get; } =
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
-        + Path.DirectorySeparatorChar
-        + ".openshell";
+    /// <summary>
+    /// 持久化根目录。默认 <c>~/.openshell</c>；若设置了非空 <c>OPENSHELL_HOME</c> 则使用该值。
+    /// 在进程启动早期读取一次并缓存（静态初始化），运行中修改环境变量不生效。
+    /// </summary>
+    public static string Root { get; } = ResolveRoot();
+
+    private static string ResolveRoot()
+    {
+        var overrideRoot = Environment.GetEnvironmentVariable("OPENSHELL_HOME");
+        if (!string.IsNullOrWhiteSpace(overrideRoot))
+            return overrideRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+            + Path.DirectorySeparatorChar
+            + ".openshell";
+    }
 
     /// <summary>主配置文件 <c>config.toml</c>。</summary>
     public static string Config => Path.Combine(Root, "config.toml");
