@@ -20,6 +20,9 @@
 | T-506 | P0 | D-506 | 修复 GUI 资源键泄漏与动态语言刷新 | `[x]` | T-590 | GUI stability compliance |
 | T-507 | P0 | D-507 | 窗口挂载后把文件列表绑定到活动标签页 | `[x]` | T-506 | GUI stability compliance |
 | T-591 | P0 | — | 全量构建、测试、Skip 审计、CLI/GUI 烟测并回写结果 | `[x]` | T-500~T-507 | 全解决方案 |
+| T-508 | P1 | D-508 | 发布流水线 SDK 对齐 10.0.x 并统一 bash 版本展开 | `[x]` | T-505 | `Release_UsesCiAlignedSdkAndBashExpansion` |
+| T-509 | P1 | D-509 | 新增 `OPENSHELL_HOME` 覆盖口，CLI 进程测试默认隔离 | `[x]` | T-591 | `CliProcessIsolation_RespectsOpenShellHome` |
+| T-510 | P1 | D-510 | 会话 JSON 改为临时文件+原子替换 | `[x]` | T-591 | `ConcurrentSaves_NeverCorruptSessionFile` |
 
 ## 变更日志
 
@@ -34,3 +37,7 @@
 - 2026-07-18 T-506 完成：新增可重复的控件树翻译器，修正 XAML 错键并显式注入 i18n；中文启动与运行时切换英文合规测试通过。
 - 2026-07-18 T-507 完成：文件列表改用逻辑树查找并在窗口挂载/标签切换时同步活动 `BrowserTab`；GUI 全套 63 通过 / 0 跳过 / 0 失败。
 - 2026-08-27 T-591 完成：最终验收通过。构建 0 警告 / 0 错误（先修复阻塞项：SSH.NET 2026.0.0 升级，见 gui-cli-optimization 主题 T-623）；全解决方案连跑两遍 2119 通过 / 2 跳过（仅真实 SFTP）/ 0 失败；CLI 与 GUI 真实进程烟测通过；验收中发现的 D-626/D-627/D-628 已修复并回写审计。最终计数记录见审计文档第六节。
+- 2026-08-27 深度复查新增 D-508/D-509/D-510（T-508~T-510）：发布流水线与 CI SDK 不一致且 pwsh 下版本展开失效；E2E 测试共享真实 ~/.openshell；会话 JSON 非原子写。三项合规测试先行（隔离测试在特性缺失下无法通过、发布合规断言 8.0.x 残留失败）。
+- 2026-08-27 T-508 完成：release.yml SDK 对齐 10.0.x，版本展开步骤统一 bash；`Release_UsesCiAlignedSdkAndBashExpansion` 通过；本地 win-x64 自包含 publish 实测可运行。
+- 2026-08-27 T-509 完成：`OpenShellPaths.Root` 支持 `OPENSHELL_HOME`；`CliProcessRunner` 默认注入一次性隔离目录；`CliProcessIsolation_RespectsOpenShellHome` 与既有锁保护测试改走隔离目录后通过。
+- 2026-08-27 T-510 完成：会话写盘改临时文件+原子替换；`ConcurrentSaves_NeverCorruptSessionFile`（8 写者并发 + 持续读者校验）通过。全量 2120 通过 / 2 跳过 / 0 失败。
