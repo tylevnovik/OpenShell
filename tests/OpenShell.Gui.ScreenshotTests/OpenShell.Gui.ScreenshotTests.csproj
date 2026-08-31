@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- IH-011: 桌面截图门禁独立成测试进程。
+       帧捕获要求 headless 会话以 Skia 真实渲染 (UseHeadlessDrawing=false) 启动,
+       而 OpenShell.Gui.Headless.XUnit 的 [AvaloniaFact] 测试共享程序集级静态会话——
+       两者同进程混跑会互相拆毁全局 Avalonia 状态 (IWindowingPlatform 丢失)。
+       xunit 对每个测试 dll 使用独立 testhost 进程, 因此隔离到本项目即可根治。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>OpenShell.Gui.ScreenshotTests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\OpenShell.Gui.Host\OpenShell.Gui.Host.csproj" />
+    <ProjectReference Include="..\..\src\OpenShell.Core\OpenShell.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless" />
+    <PackageReference Include="Avalonia.Headless.XUnit" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+</Project>

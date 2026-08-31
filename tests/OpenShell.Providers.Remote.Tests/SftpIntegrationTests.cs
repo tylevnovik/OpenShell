@@ -15,7 +15,7 @@ namespace OpenShell.Providers.Remote.Tests;
 /// <list type="bullet">
 ///   <item><c>OPENSHELL_TEST_SFTP_HOST</c> / <c>OPENSHELL_TEST_SFTP_PORT</c> (默认 22)</item>
 ///   <item><c>OPENSHELL_TEST_SFTP_USER</c> / <c>OPENSHELL_TEST_SFTP_PASSWORD</c></item>
-///   <item><c>OPENSHELL_TEST_SFTP_ROOT</c> (可写根目录, 默认 <c>/upload</c>, 即 atmoz/sftp 容器约定)</item>
+///   <item><c>OPENSHELL_TEST_SFTP_ROOT</c> (可选: 显式指定可写根目录; 缺省自动探测工作目录与 upload/uploads)</item>
 /// </list>
 /// CI 中由 <c>remote-integration</c> 作业提供隔离 OpenSSH 容器。
 /// 主机密钥策略: 当前实现沿用 SSH.NET 默认的首次信任 (accept-all);
@@ -29,10 +29,9 @@ public class SftpIntegrationTests : IDisposable
     public SftpIntegrationTests()
     {
         _provider = new SftpProvider(new EnvCredentialProvider());
-        _testDir = $"{SftpTestEnv.Root}/os-it-{Guid.NewGuid():N}";
         using var client = CreateDirectClient();
         client.Connect();
-        client.CreateDirectory(_testDir);
+        _testDir = EnsureWritableTestDir(client);
     }
 
     public void Dispose()
@@ -159,6 +158,48 @@ public class SftpIntegrationTests : IDisposable
         await stream.WriteAsync(content);
     }
 
+    /// <summary>
+    /// 发现可写测试目录: 依次尝试显式配置的 Root、登录工作目录 (chroot 感知)、
+    /// atmoz/sftp 惯例的 upload / uploads 子目录; 第一个能 mkdir 成功的位置胜出。
+    /// CI 首跑证明硬编码 /upload 不存在于容器视图, 因此不对服务器布局做假设。
+    /// </summary>
+    private static string EnsureWritableTestDir(SftpClient client)
+    {
+        var home = (client.WorkingDirectory ?? "").TrimEnd('/');
+        if (home.Length == 0) home = "/";
+        var unique = "os-it-" + Guid.NewGuid().ToString("N");
+
+        var parents = new List<string>();
+        var configured = Environment.GetEnvironmentVariable("OPENSHELL_TEST_SFTP_ROOT");
+        if (!string.IsNullOrWhiteSpace(configured)) parents.Add(configured.TrimEnd('/'));
+        parents.Add(home);
+        foreach (var sub in new[] { "upload", "uploads" })
+        {
+            var dir = home == "/" ? "/" + sub : home + "/" + sub;
+            if (!parents.Contains(dir)) parents.Add(dir);
+        }
+
+        foreach (var parent in parents)
+        {
+            var dir = (parent == "/" ? "" : parent) + "/" + unique;
+            try
+            {
+                // 子目录 (upload/uploads) 可能尚不存在; "已存在/无权限" 均不影响下一步试探。
+                try { client.CreateDirectory(parent); }
+                catch (Renci.SshNet.Common.SshException) { /* 继续直接试 mkdir 测试目录 */ }
+                client.CreateDirectory(dir);
+                return dir;
+            }
+            catch (Renci.SshNet.Common.SshException)
+            {
+                // SftpPermissionDeniedException / SftpPathNotFoundException 等都进入下一个候选。
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"SFTP server exposes no writable test directory (tried: {string.Join(", ", parents)}).");
+    }
+
     private static void DeleteRecursive(SftpClient client, string path)
     {
         foreach (var entry in client.ListDirectory(path))
@@ -196,7 +237,6 @@ public static class SftpTestEnv
     public static int Port => int.TryParse(Get("OPENSHELL_TEST_SFTP_PORT"), out var p) && p > 0 ? p : 22;
     public static string? User => Get("OPENSHELL_TEST_SFTP_USER");
     public static string? Password => Get("OPENSHELL_TEST_SFTP_PASSWORD");
-    public static string Root => Get("OPENSHELL_TEST_SFTP_ROOT") ?? "/upload";
 
     public static bool IsConfigured
         => !string.IsNullOrEmpty(Host) && !string.IsNullOrEmpty(User) && !string.IsNullOrEmpty(Password);

@@ -59,14 +59,14 @@ jobs:
           name: coverage-${{ matrix.os }}
           path: ./TestResults/**/coverage.cobertura.xml
 
-      # IH-011: GUI 自动化门禁——Avalonia headless 行为测试必须全绿。
-      # (常规 Test 步骤已包含; 此处单独重跑一次以便在 CI 日志中定位失败归属。)
+      # IH-011: GUI 自动化门禁——Avalonia headless 行为测试与截图门禁都必须全绿。
+      # (常规 Test 步骤已包含; 此处单独重跑以便在 CI 日志中定位失败归属。
+      #  截图测试独立成程序集: 帧捕获会话不能与共享 [AvaloniaFact] 会话同进程混跑。)
       - name: GUI automation gate
         if: matrix.os == 'ubuntu-latest'
-        run: >
-          dotnet test tests/OpenShell.Gui.Host.Tests/OpenShell.Gui.Host.Tests.csproj
-          --configuration Release
-          --no-build
+        run: |
+          dotnet test tests/OpenShell.Gui.Host.Tests/OpenShell.Gui.Host.Tests.csproj --configuration Release --no-build
+          dotnet test tests/OpenShell.Gui.ScreenshotTests/OpenShell.Gui.ScreenshotTests.csproj --configuration Release --no-build
 
       # IH-011: 覆盖率门禁——Core 行覆盖率低于阈值时构建失败。
       # 基线: 2026-08-31 全量实测 46.6% (Windows); 阈值留出平台间跳过项差异余量, 只升不降。
@@ -120,7 +120,6 @@ jobs:
           OPENSHELL_TEST_SFTP_PORT: '2222'
           OPENSHELL_TEST_SFTP_USER: osuser
           OPENSHELL_TEST_SFTP_PASSWORD: ospass
-          OPENSHELL_TEST_SFTP_ROOT: /upload
 
       - name: Upload integration results
         if: always()

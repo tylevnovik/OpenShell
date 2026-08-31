@@ -18,6 +18,7 @@
     <Project Path="tests/OpenShell.Providers.Remote.Tests/OpenShell.Providers.Remote.Tests.csproj" />
     <Project Path="tests/OpenShell.IntegrationTests/OpenShell.IntegrationTests.csproj" />
     <Project Path="tests/OpenShell.Gui.Host.Tests/OpenShell.Gui.Host.Tests.csproj" />
+    <Project Path="tests/OpenShell.Gui.ScreenshotTests/OpenShell.Gui.ScreenshotTests.csproj" />
     <Project Path="tests/OpenShell.Benchmarks/OpenShell.Benchmarks.csproj" />
   </Folder>
 </Solution>

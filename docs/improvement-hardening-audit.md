@@ -55,9 +55,9 @@
 
 ## 五、未完成项与验证边界（第二轮后更新）
 
-- IH-006 本地未实测容器：本机无 docker、WSL 安装 sshd 需密码，集成用例真实执行依赖 CI `remote-integration` 作业；本地已验证条件 Skip 与编译。若 CI 首次运行暴露 atmoz/sftp 行为差异（如 `/upload` 路径），需按失败日志微调环境变量。
-- IH-011 剩余人工步骤：三平台真实桌面 1200x800 / 800x500 复验仍未做；`docs/screenshots/` 中的产物是 headless+Skia 渲染（真实布局/绘制，但无桌面合成器，且测试环境未注入 i18n，界面标签显示键名）。
+- IH-006 CI 首跑发现 atmoz/sftp 容器内 `/upload` 目录假设不成立（fixture 构造即 SftpPathNotFoundException），已改为可写目录自动探测（显式 Root → 登录工作目录 → upload/uploads），待下一次 CI 验证真实读写全链路。
+- IH-011 剩余人工步骤：三平台真实桌面 1200x800 / 800x500 复验仍未做；`docs/screenshots/` 中的产物是 headless+Skia 渲染（真实布局/绘制，但无桌面合成器，且测试环境未注入 i18n，界面标签显示键名）。截图门禁会话曾与 Gui.Host.Tests 共享 headless 静态会话互踩（`IWindowingPlatform` 丢失），已隔离为独立测试项目 `tests/OpenShell.Gui.ScreenshotTests`。
 - IH-015（新）：SFTP 主机密钥固定（host-key pinning）未实现——当前沿用 SSH.NET 首次信任（TOFU），存在中间人风险；需设计凭据级指纹字段与用户确认流程。
-- macOS 的 `codesign` 命令仍未在 macOS 主机现场执行（实现为绝对路径 + ArgumentList + 取消处理）；Keychain 路径同理依赖系统 `security` 工具行为。
+- macOS Keychain 已在 macOS runner 现场验证可用（CI 首跑中凭据实际写入钥匙串而非文件，探测-回退逻辑按设计工作）；`codesign` 命令路径仍未在 macOS 主机现场执行（实现为绝对路径 + ArgumentList + 取消处理）。
 - Evaluator 其余 9 处 `GetAwaiter().GetResult()` 已全部经 `BlockSafe` 保护；把 shell 改为端到端异步执行仍是未来大改，不在本轮范围。
 - 最终验证（第二轮）：`dotnet build OpenShell.slnx` 0 警告/0 错误；全解决方案测试 **2161 通过、8 跳过、0 失败**（跳过 = 2 个旧契约测试需真实服务器 + 6 个 `SftpIntegrationTests` 条件集成用例）。

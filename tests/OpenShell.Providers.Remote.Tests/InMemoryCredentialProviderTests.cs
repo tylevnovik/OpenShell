@@ -187,7 +187,11 @@ public class InMemoryCredentialProviderTests : IDisposable
     [Fact]
     public void SetCredentials_PersistsToFile()
     {
-        var provider = CreateProvider();
+        // IH-012: macOS 默认存储改为 Keychain；本测试专门断言"受保护文件"路径，
+        // 因此显式注入 ProtectedFileSecretStore，不依赖平台默认选择。
+        var secretFilePath = CredFilePath + ".secrets";
+        var provider = new InMemoryCredentialProvider(
+            CredFilePath, new ProtectedFileSecretStore(secretFilePath));
         provider.SetCredentials(new SftpCredentials
         {
             Host = "example.com",
@@ -203,9 +207,8 @@ public class InMemoryCredentialProviderTests : IDisposable
         json.Should().Contain("alice");
         json.Should().NotContain("s3cret");
         json.Should().Contain("2222");
-        var secretFile = CredFilePath + ".secrets";
-        File.Exists(secretFile).Should().BeTrue();
-        File.ReadAllText(secretFile).Should().NotContain("s3cret");
+        File.Exists(secretFilePath).Should().BeTrue();
+        File.ReadAllText(secretFilePath).Should().NotContain("s3cret");
     }
 
     // ---- ListCredentials ----
