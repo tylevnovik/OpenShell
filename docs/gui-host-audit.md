@@ -2,8 +2,10 @@
 
 - **主题**: GUI Host 不符合 Windows Explorer 设计标准 / 视觉显示异常 / 功能运作异常
 - **关联 ADR**: ADR-0013（GUI MVVM/ReactiveUI）、ADR-0027（主题/快捷键）、ADR-0028（菜单/工具栏）、ADR-0029（剪贴板/拖拽）、ADR-0030（预览/搜索）、ADR-0034（会话恢复）、ADR-0035（i18n）
-- **日期**: 2026-07-11
-- **状态**: P0+P1+P2+P3 全部修复（T-400~T-450 全部完成），包括 T-440 多标签页。构建 0 警告 0 错误，61 个 GUI Host 合规测试全部通过，全量测试 0 失败。仅剩 V-17（窗口图标需 .ico 文件）和 T-440 的 tab 拖出/持久化作为未来增强。
+- **日期**: 2026-07-11（历史基线）；2026-08-29 当前复核
+- **状态**: 历史 T-400~T-450 结论保留作变更记录；本文件正文中的“未接线”描述是历史快照。当前 LP-001~LP-010 的实现状态、自动化证据和验证边界以 `docs/latest-project-audit.md` 第六节为准。
+
+> **2026-08-29 复核说明**：本报告创建于当前 GUI 接线完成前，原有章节用于保留问题来源，不能单独代表当前源码状态。当前文件列表已同步选择并注册拖放，QuickLook/全局搜索/地址栏/PreviewPane/ViewMode 菜单已接线，导航树携带可执行路径；未能在自动化环境完成的真实桌面双尺寸截图仍属于人工验收项。
 
 ---
 
@@ -38,6 +40,16 @@ GUI Host 代码组织清晰、i18n 完整、ReactiveUI 异常订阅规范，但�
 3. **快捷键体系严重残缺**：缺 Ctrl+C/X/V、空格预览、Ctrl+F 搜索、Ctrl+Z 撤销、Alt+Enter 属性、Shift+Delete 永久删除等 Explorer 标准快捷键；且 `OnGlobalKeyDown` 未排除 TextBox 焦点，在搜索框/控制台输入时按 Delete/F2/Ctrl+A 会误触发文件操作。
 
 **问题统计**：Critical 18 / High 27 / Medium 22 / Low 11，合计 78 项。
+
+### 1.3 当前接线复核（2026-08-29）
+
+| 功能 | 当前状态 | 自动化边界 |
+|------|------|------|
+| 文件列表选择 | `SelectionChanged` 与 `Pane.SelectedItems` 双向同步 | Avalonia headless 真实选择通过 |
+| 剪贴板/拖放 | DI 已注册；文件列表注册 drop target，Pointer 手势调用 drag source | OS 原生拖动效果需桌面手工验收 |
+| QuickLook/Preview | 空格调用 QuickLook；PreviewPane 订阅活动 Pane，支持文本/代码/图片/归档等 | 真实窗口尺寸与渲染仍需手工截图 |
+| 地址栏/搜索/导航 | Ctrl+L/Alt+D、Enter/Escape、全局搜索入口及带路径导航节点已接线 | 全局搜索依赖真实索引/Provider 数据 |
+| ViewMode/新窗口 | 四种模板由 ViewMode 驱动；菜单点击切换；New Window 创建共享会话状态的次窗口 | 次窗口独立会话语义仍是未来增强 |
 
 ---
 

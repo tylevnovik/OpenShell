@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using OpenShell.Clipboard;
@@ -36,15 +37,18 @@ public class GuiHostComplianceTests
 
         TestAppBuilder.PumpDispatcher();
 
+        var item = Item.File(new ItemPath { Provider = "fs", InternalPath = "/selection-compliance.txt" });
+        vm.ActivePane.Items.Add(item);
+        TestAppBuilder.PumpDispatcher();
+
         // 模拟 UI 选中：直接操作 ListBox.SelectedItems（Avalonia.Headless 支持）
         var fileList = TestAppBuilder.FindDescendants<ListBox>(window)
             .FirstOrDefault(lb => lb.ContextMenu is not null);
         fileList.Should().NotBeNull("主文件列表应存在");
+        fileList!.SelectedItems!.Add(item);
+        TestAppBuilder.PumpDispatcher();
 
-        // 绑定建立后，PaneViewModel.SelectedItems 应可被 UI 选中事件更新
-        // 这里验证绑定基础设施存在（SelectionChanged 事件已挂接）
-        // 完整的交互测试在 Avalonia.Headless 中较难模拟，这里验证 VM 侧 SelectedItems 集合可写
-        vm.ActivePane.SelectedItems.Should().NotBeNull();
+        vm.ActivePane.SelectedItems.Should().ContainSingle().Which.Should().Be(item);
     }
 
     // ------------------------------------------------------------------
@@ -516,21 +520,30 @@ public class GuiHostComplianceTests
     [AvaloniaFact]
     public void Address_Bar_Editable()
     {
-        var window = new MainWindow();
+        var vm = TestAppBuilder.CreateMainViewModel();
+        var window = new MainWindow { DataContext = vm };
 
         // T-441: 验证存在地址栏编辑 TextBox（初始隐藏）
         var textBoxes = TestAppBuilder.FindDescendants<TextBox>(window).ToList();
         // 应至少有 3 个 TextBox：搜索框、控制台输入、地址栏编辑框
         textBoxes.Count.Should().BeGreaterThanOrEqualTo(3, "应有搜索框+控制台输入+地址栏编辑框");
 
-        // 验证 MainWindow 有 EnterAddressBarEditMode / ExitAddressBarEditMode 方法
-        var enterMethod = typeof(MainWindow).GetMethod("EnterAddressBarEditMode",
+        // T-441: 真实触发 Ctrl+L，确认窗口级事件确实进入编辑模式，而不只是存在方法。
+        var keyDown = typeof(MainWindow).GetMethod("OnWindowKeyDown",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        enterMethod.Should().NotBeNull("应有 EnterAddressBarEditMode 方法");
-
-        var exitMethod = typeof(MainWindow).GetMethod("ExitAddressBarEditMode",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        exitMethod.Should().NotBeNull("应有 ExitAddressBarEditMode 方法");
+        keyDown.Should().NotBeNull("应有窗口级 KeyDown 入口");
+        keyDown!.Invoke(window, new object?[]
+        {
+            window,
+            new KeyEventArgs
+            {
+                RoutedEvent = InputElement.KeyDownEvent,
+                Key = Key.L,
+                KeyModifiers = KeyModifiers.Control,
+            },
+        });
+        vm.ActivePane.IsAddressEditing.Should().BeTrue("Ctrl+L 应进入地址栏编辑模式");
+        vm.CancelAddressBarEdit();
     }
 
     // ------------------------------------------------------------------
@@ -538,10 +551,15 @@ public class GuiHostComplianceTests
     // ------------------------------------------------------------------
 
     /// <summary>应支持视图模式切换（Details/Icons/Tiles/List）。</summary>
-    [Fact]
+    [AvaloniaFact]
     public void View_Mode_Switching()
     {
         var vm = TestAppBuilder.CreateMainViewModel();
+        var window = new MainWindow { DataContext = vm };
+        TestAppBuilder.PumpDispatcher();
+        var list = TestAppBuilder.FindDescendants<FileListView>(window)
+            .Single().FindControl<ListBox>("InnerFileList")!;
+        var detailsTemplate = list.ItemTemplate;
 
         // T-442: MainViewModel 应有 ViewMode 属性，默认 Details
         vm.ViewMode.Should().Be(ViewMode.Details, "默认视图模式应为 Details");
@@ -549,6 +567,8 @@ public class GuiHostComplianceTests
         // 切换到 Icons
         vm.ViewMode = ViewMode.Icons;
         vm.ViewMode.Should().Be(ViewMode.Icons, "应能切换到 Icons 模式");
+        TestAppBuilder.PumpDispatcher();
+        list.ItemTemplate.Should().NotBeSameAs(detailsTemplate, "视图模式切换应替换文件列表模板");
 
         // 切换到 Tiles
         vm.ViewMode = ViewMode.Tiles;
@@ -742,7 +762,8 @@ public class GuiHostComplianceTests
     [AvaloniaFact]
     public void Preview_Pane_UI_Exists()
     {
-        var window = new MainWindow();
+        var vm = TestAppBuilder.CreateMainViewModel();
+        var window = new MainWindow { DataContext = vm };
 
         // 验证 _previewPane 字段存在
         var field = typeof(MainWindow).GetField("_previewPane",
@@ -753,6 +774,11 @@ public class GuiHostComplianceTests
         var method = typeof(MainWindow).GetMethod("BuildPreviewPane",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         method.Should().NotBeNull("MainWindow 应有 BuildPreviewPane 方法");
+        var preview = TestAppBuilder.FindDescendants<PreviewPane>(window).Single();
+        preview.IsVisible.Should().BeFalse("预览面板默认应隐藏");
+        vm.IsPreviewPaneVisible = true;
+        TestAppBuilder.PumpDispatcher();
+        preview.IsVisible.Should().BeTrue("菜单状态改变后预览控件应显示");
     }
 
     // ------------------------------------------------------------------

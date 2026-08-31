@@ -19,6 +19,7 @@ using OpenShell.I18n;
 using OpenShell.Items;
 using OpenShell.Operations;
 using OpenShell.Paths;
+using OpenShell.Preview;
 using OpenShell.Providers;
 using OpenShell.Sessions;
 using ReactiveUI;
@@ -127,6 +128,7 @@ public sealed class MainViewModel : ReactiveViewModel
     private readonly IClipboardService? _clipboard;
     private readonly IUndoService? _undo;
     private readonly IQuickLookWindow? _quickLook;
+    private readonly IPreviewService? _preview;
     private readonly SessionTabsService? _sessionTabs;
     private readonly ItemPath _initialLocation;
     private readonly Dictionary<BrowserTab, CompositeDisposable> _tabSubscriptions = new();
@@ -176,6 +178,7 @@ public sealed class MainViewModel : ReactiveViewModel
         IClipboardService? clipboard = null,
         IUndoService? undo = null,
         IQuickLookWindow? quickLook = null,
+        IPreviewService? preview = null,
         // T-448: 构造函数注入 II18nService，替代 Service Locator
         II18nService? i18n = null,
         SessionTabsService? sessionTabs = null)
@@ -193,6 +196,7 @@ public sealed class MainViewModel : ReactiveViewModel
         _clipboard = clipboard;
         _undo = undo;
         _quickLook = quickLook;
+        _preview = preview;
         _sessionTabs = sessionTabs;
         _initialLocation = initialLocation;
 
@@ -274,7 +278,9 @@ public sealed class MainViewModel : ReactiveViewModel
         PasteCommand = ReactiveCommand.CreateFromTask(PasteCoreAsync);
         CopyAsPathCommand = ReactiveCommand.CreateFromTask(CopyAsPathCoreAsync);
         MoveCommand = ReactiveCommand.CreateFromTask(MoveCoreAsync);
-        DeleteCommand = ReactiveCommand.CreateFromTask(DeleteCoreAsync);
+        DeleteCommand = ReactiveCommand.CreateFromTask(() => DeleteCoreAsync());
+        // Shift+Delete 明确选择物理删除；普通 Delete 仍进入回收站。
+        ForceDeleteCommand = ReactiveCommand.CreateFromTask(() => DeleteCoreAsync(permanent: true));
         OpenCommand = ReactiveCommand.CreateFromTask<IItem?>(OpenCoreAsync);
         RenameCommand = ReactiveCommand.CreateFromTask(RenameCoreAsync);
         // T-407: 新建文件夹命令
@@ -282,7 +288,7 @@ public sealed class MainViewModel : ReactiveViewModel
         // F-03: 新建文件命令
         NewFileCommand = ReactiveCommand.CreateFromTask(NewFileCoreAsync);
         // T-405: QuickLook 预览命令
-        QuickLookCommand = ReactiveCommand.Create<IItem?>(item => QuickLookCore(item));
+        QuickLookCommand = ReactiveCommand.CreateFromTask<IItem?>(QuickLookCoreAsync);
         // T-409: 撤销/重做命令
         UndoCommand = ReactiveCommand.CreateFromTask(async () =>
         {
@@ -344,6 +350,7 @@ public sealed class MainViewModel : ReactiveViewModel
         CopyAsPathCommand.ThrownExceptions.Subscribe(_ => { }).DisposeWith(Disposables);
         MoveCommand.ThrownExceptions.Subscribe(_ => { }).DisposeWith(Disposables);
         DeleteCommand.ThrownExceptions.Subscribe(_ => { }).DisposeWith(Disposables);
+        ForceDeleteCommand.ThrownExceptions.Subscribe(_ => { }).DisposeWith(Disposables);
         OpenCommand.ThrownExceptions.Subscribe(_ => { }).DisposeWith(Disposables);
         RenameCommand.ThrownExceptions.Subscribe(_ => { }).DisposeWith(Disposables);
         NewFolderCommand.ThrownExceptions.Subscribe(_ => { }).DisposeWith(Disposables);
@@ -494,6 +501,46 @@ public sealed class MainViewModel : ReactiveViewModel
         }
     }
 
+    /// <summary>提交地址栏文本：支持完整 ItemPath、绝对本地路径和当前目录下的相对路径。</summary>
+    public async Task CommitAddressBarAsync()
+    {
+        var text = ActivePane.AddressText?.Trim();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            ActivePane.IsAddressEditing = false;
+            return;
+        }
+
+        try
+        {
+            var path = text.Contains("::", StringComparison.Ordinal)
+                ? ItemPath.Parse(text)
+                : System.IO.Path.IsPathRooted(text)
+                    ? new ItemPath { Provider = "fs", InternalPath = text.Replace('\\', '/') }
+                    : ActivePane.CurrentLocation.Combine(text);
+            await ActivePane.NavigateToAsync(path);
+            StatusMessage = path.Display;
+        }
+        catch (Exception ex)
+        {
+            _errors.Write(new ErrorRecord
+            {
+                Category = ErrorCategory.InvalidArgument,
+                Message = ex.Message,
+                Operation = "address-bar",
+                Phase = ErrorPhase.ArgumentBinding,
+            });
+            StatusMessage = ex.Message;
+        }
+        finally
+        {
+            ActivePane.IsAddressEditing = false;
+        }
+    }
+
+    /// <summary>取消地址栏编辑并恢复面包屑显示。</summary>
+    public void CancelAddressBarEdit() => ActivePane.IsAddressEditing = false;
+
     /// <summary>导航树节点集合。</summary>
     public ObservableCollection<NavigationItem> NavigationItems { get; }
 
@@ -553,6 +600,8 @@ public sealed class MainViewModel : ReactiveViewModel
     public ReactiveCommand<Unit, Unit> CopyAsPathCommand { get; }
     public ReactiveCommand<Unit, Unit> MoveCommand { get; }
     public ReactiveCommand<Unit, Unit> DeleteCommand { get; }
+    /// <summary>Shift+Delete 的物理删除命令；不经过回收站。</summary>
+    public ReactiveCommand<Unit, Unit> ForceDeleteCommand { get; }
     public ReactiveCommand<IItem?, Unit> OpenCommand { get; }
     public ReactiveCommand<Unit, Unit> RenameCommand { get; }
     // T-407: 新建文件夹
@@ -750,11 +799,19 @@ public sealed class MainViewModel : ReactiveViewModel
     }
 
     /// <summary>T-405: QuickLook 预览选中项。</summary>
-    private void QuickLookCore(IItem? item)
+    private async Task QuickLookCoreAsync(IItem? item)
     {
         if (item is null && ActivePane.SelectedItems.FirstOrDefault() is not { } selected) return;
         var target = item ?? ActivePane.SelectedItems.First();
-        _quickLook?.Show(target, null);
+        PreviewViewModel? preview = null;
+        if (_preview is not null)
+        {
+            preview = await _preview.CreatePreviewAsync(
+                target,
+                new PreviewOptions(MaxWidth: 800, MaxHeight: 600),
+                _cancelTokenAccessor());
+        }
+        _quickLook?.Show(target, preview);
     }
 
     private async Task MoveCoreAsync()
@@ -777,7 +834,7 @@ public sealed class MainViewModel : ReactiveViewModel
         StatusMessage = T("gui.status.movedN", count, dest.Value.Display);
     }
 
-    private async Task DeleteCoreAsync()
+    private async Task DeleteCoreAsync(bool permanent = false)
     {
         if (ActivePane.SelectedItems.Count == 0) return;
         var names = string.Join(", ", ActivePane.SelectedItems.Select(i => i.Name));
@@ -791,7 +848,10 @@ public sealed class MainViewModel : ReactiveViewModel
         if (result != DialogResult.Yes) return;
         foreach (var item in ActivePane.SelectedItems)
         {
-            await _operations.DeleteAsync(item.Path);
+            await _operations.DeleteAsync(item.Path, new DeleteOptions
+            {
+                UseTrash = !permanent,
+            });
         }
         await ActivePane.RefreshCommand.Execute();
     }

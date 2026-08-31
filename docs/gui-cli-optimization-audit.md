@@ -6,6 +6,8 @@
 - **关联任务清单**: `docs/gui-cli-optimization-tasks.md`
 - **合规测试**: `GuiCliOptimizationGuiComplianceTests.cs` / `GuiCliOptimizationCliComplianceTests.cs`
 
+> **当前状态（2026-08-29）**：本文件前两节保留 2026-07/2026-08 的历史发现与修复记录。最新项目复核已在 `docs/latest-project-audit.md` 第六节完成：共享 CLI 参数绑定、Property 实值输出、GUI 选择/预览/快捷键/拖放/导航/ViewMode 接线均已落地；最新全解方案为 2131 通过 / 2 跳过 / 0 失败。真实桌面双尺寸截图没有在自动化环境中冒充完成，仍需人工验收。
+
 ## 一、基线与实证
 
 - 当前分支建立前，全解决方案为 2088 通过 / 2 跳过 / 0 失败；两个跳过项均依赖真实 SFTP 服务。

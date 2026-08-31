@@ -424,6 +424,11 @@ public sealed class ResourceI18nService : II18nService
         ["gui.search.results"] = "{0} results in {1} ms",
         ["gui.search.cancelled"] = "cancelled ({0} results)",
         ["gui.search.error"] = "Error: {0}",
+        ["gui.search.includeContents"] = "Search contents",
+        ["gui.search.cancel"] = "Cancel",
+        ["gui.search.index.ready"] = "Index ready",
+        ["gui.search.index.warming"] = "Index warming; live search active",
+        ["gui.search.index.live"] = "Live search",
         // --- GUI: QuickLook ---
         ["gui.quicklook.title"] = "Quick Look — OpenShell",
         ["gui.quicklook.noPreview"] = "(no preview available)",
@@ -505,6 +510,11 @@ public sealed class ResourceI18nService : II18nService
         ["gui.detailsPane.empty"] = "Select an item to view its properties",
         // T-446: 预览侧边面板
         ["gui.previewPane.title"] = "Preview",
+        ["gui.previewPane.empty"] = "Select an item to preview",
+        ["gui.previewPane.loading"] = "Loading preview...",
+        ["gui.previewPane.ready"] = "Preview ready",
+        ["gui.previewPane.unsupported"] = "Preview is not supported",
+        ["gui.previewPane.noMetadata"] = "No metadata available",
         ["gui.menu.previewPane"] = "Preview Pane",
         ["gui.menu.detailsPane"] = "Details Pane",
         // T-450: 新增菜单项
@@ -712,6 +722,11 @@ public sealed class ResourceI18nService : II18nService
         ["gui.search.results"] = "{0} 个结果, 耗时 {1} 毫秒",
         ["gui.search.cancelled"] = "已取消 ({0} 个结果)",
         ["gui.search.error"] = "错误: {0}",
+        ["gui.search.includeContents"] = "搜索内容",
+        ["gui.search.cancel"] = "取消",
+        ["gui.search.index.ready"] = "索引已就绪",
+        ["gui.search.index.warming"] = "索引构建中；当前使用实时搜索",
+        ["gui.search.index.live"] = "实时搜索",
         // --- GUI: QuickLook ---
         ["gui.quicklook.title"] = "快速预览 — OpenShell",
         ["gui.quicklook.noPreview"] = "(无预览可用)",
@@ -793,6 +808,11 @@ public sealed class ResourceI18nService : II18nService
         ["gui.detailsPane.empty"] = "选择一个项目以查看属性",
         // T-446: 预览侧边面板
         ["gui.previewPane.title"] = "预览",
+        ["gui.previewPane.empty"] = "选择一个项目以预览",
+        ["gui.previewPane.loading"] = "正在加载预览...",
+        ["gui.previewPane.ready"] = "预览已就绪",
+        ["gui.previewPane.unsupported"] = "此项目不支持预览",
+        ["gui.previewPane.noMetadata"] = "没有可用元数据",
         ["gui.menu.previewPane"] = "预览面板",
         ["gui.menu.detailsPane"] = "属性面板",
         // T-450: 新增菜单项

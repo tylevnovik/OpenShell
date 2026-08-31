@@ -8,6 +8,37 @@
     <conv:FileSizeConverter x:Key="SizeConverter"/>
     <conv:ItemTypeConverter x:Key="TypeConverter"/>
     <conv:ItemIconConverter x:Key="IconConverter"/>
+    <DataTemplate x:Key="DetailsItemTemplate">
+      <Grid ColumnDefinitions="32,*,100,140,170">
+        <ContentControl Grid.Column="0" Content="{Binding Converter={StaticResource IconConverter}}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+        <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" Margin="4,0" TextTrimming="CharacterEllipsis"/>
+        <TextBlock Grid.Column="2" Text="{Binding Length, Converter={StaticResource SizeConverter}}" VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="3" Text="{Binding Converter={StaticResource TypeConverter}}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+        <TextBlock Grid.Column="4" Text="{Binding ModifiedTime}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+      </Grid>
+    </DataTemplate>
+    <DataTemplate x:Key="IconsItemTemplate">
+      <StackPanel Width="120" Margin="6" HorizontalAlignment="Center">
+        <ContentControl Content="{Binding Converter={StaticResource IconConverter}}" Height="42" HorizontalAlignment="Center"/>
+        <TextBlock Text="{Binding Name}" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+      </StackPanel>
+    </DataTemplate>
+    <DataTemplate x:Key="TilesItemTemplate">
+      <Grid ColumnDefinitions="42,*,120" Margin="4">
+        <ContentControl Grid.Column="0" Content="{Binding Converter={StaticResource IconConverter}}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+        <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+        <StackPanel Grid.Column="2">
+          <TextBlock Text="{Binding Converter={StaticResource TypeConverter}}" TextTrimming="CharacterEllipsis"/>
+          <TextBlock Text="{Binding Length, Converter={StaticResource SizeConverter}}" Foreground="{DynamicResource ShellTextSecondaryBrush}"/>
+        </StackPanel>
+      </Grid>
+    </DataTemplate>
+    <DataTemplate x:Key="ListItemTemplate">
+      <StackPanel Orientation="Horizontal" Margin="4">
+        <ContentControl Content="{Binding Converter={StaticResource IconConverter}}" Width="28" HorizontalAlignment="Center"/>
+        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+      </StackPanel>
+    </DataTemplate>
   </UserControl.Resources>
   <DockPanel Background="{DynamicResource ShellContentSurfaceBrush}">
     <Border DockPanel.Dock="Top" Background="{DynamicResource ShellElevatedSurfaceBrush}"
@@ -31,19 +62,11 @@
     </Border>
     <Grid>
       <ListBox ItemsSource="{Binding Pane.Items}" SelectionMode="Multiple" Classes="FileList"
+               DragDrop.AllowDrop="True"
+               PointerPressed="OnPointerPressed" PointerMoved="OnPointerMoved" PointerReleased="OnPointerReleased"
                DoubleTapped="OnFileDoubleTapped" ContextRequested="OnContextRequested" x:Name="InnerFileList"
-               AutomationProperties.Name="gui.files.label">
-        <ListBox.ItemTemplate>
-          <DataTemplate>
-            <Grid ColumnDefinitions="32,*,100,140,170">
-              <ContentControl Grid.Column="0" Content="{Binding Converter={StaticResource IconConverter}}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-              <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" Margin="4,0" TextTrimming="CharacterEllipsis"/>
-              <TextBlock Grid.Column="2" Text="{Binding Length, Converter={StaticResource SizeConverter}}" VerticalAlignment="Center"/>
-              <TextBlock Grid.Column="3" Text="{Binding Converter={StaticResource TypeConverter}}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-              <TextBlock Grid.Column="4" Text="{Binding ModifiedTime}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-            </Grid>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
+               AutomationProperties.Name="gui.files.label"
+               ItemTemplate="{DynamicResource DetailsItemTemplate}">
         <ListBox.ContextMenu>
           <ContextMenu>
             <MenuItem Header="gui.ctx.open" Tag="gui.ctx.open" Command="{Binding Owner.OpenCommand}" CommandParameter="{Binding SelectedItem, ElementName=InnerFileList}"/>

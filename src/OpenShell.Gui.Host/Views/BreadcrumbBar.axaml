@@ -22,6 +22,7 @@
     </ScrollViewer>
     <TextBox Text="{Binding ActivePane.AddressText}" IsVisible="{Binding ActivePane.IsAddressEditing}"
              Margin="2" HorizontalAlignment="Stretch" x:Name="AddressTextBox"
+             KeyDown="OnAddressKeyDown"
              AutomationProperties.Name="gui.address.label"/>
     <TextBox IsVisible="False" x:Name="HiddenTextBox1"/>
     <TextBox IsVisible="False" x:Name="HiddenTextBox2"/>

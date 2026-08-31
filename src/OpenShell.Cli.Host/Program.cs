@@ -283,6 +283,10 @@ internal sealed class Program
                 services.AddSingleton(credProvider);
                 services.AddSingleton<ICredentialProvider>(credProvider);
 
+                // IH-013: 凭据库加载失败不能静默——启动可用, 但必须明确告知用户。
+                if (credProvider.LastPersistenceError is { } credentialLoadError)
+                    Console.Error.WriteLine($"[openshell] warning: {credentialLoadError}");
+
                 // ADR-0031 §3: FileLogSink 监听 ILogStore.EntryAppended 异步落盘到
                 // ~/.openshell/logs/openshell-{date}.log, 每日轮转 + 保留 7 天。
                 // 通过 hosted service 包装: StartAsync 时由 DI 解析 FileLogSink 触发其构造 (启动消费者任务 + 订阅事件);
@@ -794,12 +798,14 @@ internal sealed class CliHost : OpenShell.IHost, ICommandLineExecutor, IDisposab
 
     private static void RenderItemLine(IItem item)
     {
-        // D-310: Property 类型（如 pwd/Get-Location 输出）显示 Path 属性值（完整路径），
-        // 而非 item.Name（仅目录名）。之前 pwd 输出 "openshell-test-xxx" 而非完整路径。
         if (item.Kind == ItemKind.Property)
         {
-            var path = item.Properties["Path"]?.ToString() ?? item.Name;
-            Console.WriteLine($"  {path}");
+            // Property 结果优先显示 Value；否则 Get-Date 等命令只能显示固定的 Name。
+            var value = item.Properties["Value"];
+            var display = value?.ToString()
+                ?? item.Properties["Path"]?.ToString()
+                ?? item.Name;
+            Console.WriteLine($"  {display}");
             return;
         }
         var icon = item.Kind == ItemKind.Directory ? "DIR " : "    ";
@@ -1490,6 +1496,17 @@ internal sealed class CliHost : OpenShell.IHost, ICommandLineExecutor, IDisposab
                 Phase = ErrorPhase.Operation,
             });
         }
+        catch (OpenShellException ex)
+        {
+            _errors.Write(new ErrorRecord
+            {
+                Category = ex.Category,
+                Message = ex.Message,
+                Operation = "script",
+                Phase = ErrorPhase.ArgumentBinding,
+                Exception = ex,
+            });
+        }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
@@ -1510,127 +1527,7 @@ internal sealed class CliHost : OpenShell.IHost, ICommandLineExecutor, IDisposab
     }
 
     private static object ParseArgs(CommandDescriptor desc, string[] tokens)
-    {
-        // 先收集所有 bool 参数名（含别名），用于判断 -token 是否应消费下一个 token。
-        // 修复 M1-8：`get-childitem -r fs::$test` 中 -r 是 bool 开关不应吃掉 fs::$test。
-        var boolParamNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var p in desc.Parameters)
-        {
-            if (p.Type == typeof(bool))
-            {
-                boolParamNames.Add(p.Name);
-                foreach (var a in p.Aliases ?? [])
-                    boolParamNames.Add(a.TrimStart('-'));
-            }
-        }
-
-        var positional = new List<string?>();
-        var named = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-
-        for (int i = 0; i < tokens.Length; i++)
-        {
-            var t = tokens[i];
-            if (t.StartsWith("-") && t.Length > 1)
-            {
-                var key = t.TrimStart('-');
-                string? inlineValue = null;
-                // D-317: 处理 -name:value 冒号形式（PowerShell NamedParameter 语法）。
-                // 如 -type:directory 应拆分为 key=type, value=directory。
-                var colonIdx = key.IndexOf(':');
-                if (colonIdx > 0)
-                {
-                    inlineValue = key[(colonIdx + 1)..];
-                    key = key[..colonIdx];
-                }
-                // bool 开关：设为 "true"，不消费下一个 token。
-                if (inlineValue is null && boolParamNames.Contains(key))
-                {
-                    named[key] = "true";
-                    continue;
-                }
-                if (inlineValue is not null)
-                {
-                    named[key] = inlineValue;
-                }
-                else if (i + 1 < tokens.Length && !tokens[i + 1].StartsWith("-"))
-                {
-                    named[key] = tokens[++i];
-                }
-                else
-                {
-                    named[key] = "true";
-                }
-            }
-            else
-            {
-                positional.Add(t);
-            }
-        }
-
-        var constructor = desc.ArgsType.GetConstructors().First();
-        var parameters = constructor.GetParameters();
-        var argsValues = new object?[parameters.Length];
-
-        // Positional binding: track which positional indices have been consumed.
-        // Per ADR-0046 §5: ScriptBlock positional params accept only { ... } form;
-        // non- { } strings fall through to the next positional param at the same position.
-        var consumedPositional = new HashSet<int>();
-
-        foreach (var p in parameters)
-        {
-            var pdesc = desc.Parameters.FirstOrDefault(p2 => string.Equals(p2.Name, p.Name, StringComparison.OrdinalIgnoreCase));
-            if (pdesc is null) { argsValues[Array.IndexOf(parameters, p)] = null; continue; }
-
-            var paramAttr = pdesc.ParameterAttribute;
-            if (paramAttr?.Position >= 0 && paramAttr.Position < positional.Count)
-            {
-                // Try positional binding: iterate from the param's nominal position to find
-                // the next unconsumed positional value that converts to the param's type.
-                bool bound = false;
-                for (int pi = paramAttr.Position; pi < positional.Count; pi++)
-                {
-                    if (consumedPositional.Contains(pi)) continue;
-                    if (positional[pi] is not { } posValue) continue;
-                    var converted = ConvertValue(p.ParameterType, posValue);
-                    if (converted is null && p.ParameterType != typeof(object))
-                    {
-                        // ConvertValue returned null = cannot bind (e.g. ScriptBlock with non-{ } string).
-                        // Leave this positional value for the next positional param.
-                        continue;
-                    }
-                    argsValues[Array.IndexOf(parameters, p)] = converted;
-                    consumedPositional.Add(pi);
-                    bound = true;
-                    break;
-                }
-                if (bound) continue;
-            }
-            else if (named.TryGetValue(p.Name!, out var nValue))
-            {
-                argsValues[Array.IndexOf(parameters, p)] = ConvertValue(p.ParameterType, nValue!);
-                continue;
-            }
-            else
-            {
-                var matched = false;
-                foreach (var alias in paramAttr?.Aliases ?? [])
-                {
-                    if (named.TryGetValue(alias.TrimStart('-'), out var aValue))
-                    {
-                        argsValues[Array.IndexOf(parameters, p)] = ConvertValue(p.ParameterType, aValue!);
-                        matched = true;
-                        break;
-                    }
-                }
-                if (!matched)
-                {
-                    argsValues[Array.IndexOf(parameters, p)] = p.HasDefaultValue ? p.DefaultValue : null;
-                }
-            }
-        }
-
-        return constructor.Invoke(argsValues) ?? throw new InvalidOperationException("Args constructor returned null.");
-    }
+        => CommandArgumentBinder.Bind(desc, tokens, ConvertValue);
 
     private static object? ConvertValue(Type targetType, string value)
     {

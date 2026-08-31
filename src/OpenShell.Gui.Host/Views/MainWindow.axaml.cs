@@ -11,14 +11,22 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using OpenShell;
+using OpenShell.Clipboard;
 using OpenShell.Commands;
+using OpenShell.Commands.Builtins;
 using OpenShell.Completion;
 using OpenShell.Configuration;
+using OpenShell.Errors;
 using OpenShell.Favorites;
+using OpenShell.Gui.Abstractions;
 using OpenShell.Gui.Host.ViewModels;
+using OpenShell.History;
 using OpenShell.I18n;
 using OpenShell.Items;
+using OpenShell.Operations;
 using OpenShell.Paths;
+using OpenShell.Preview;
+using OpenShell.Providers;
 using OpenShell.Recent;
 using OpenShell.Themes;
 using ReactiveUI;
@@ -43,6 +51,7 @@ public partial class MainWindow : Window
     private FileListView? _mainFileListView;
     private IDisposable? _menuVisibleSubscription;
     private IDisposable? _activeTabSubscription;
+    private bool _ownsDataContext = true;
 #pragma warning restore CS0414
 
     public MainWindow() : this(null)
@@ -97,6 +106,7 @@ public partial class MainWindow : Window
     {
         _tabControl = this.FindControl<TabControl>("MainTabControl");
         _detailsPane = this.FindControl<Control>("DetailsPaneControl");
+        _previewPane = BuildPreviewPane();
         _consoleOutputList = this.FindControl<ListBox>("ConsoleOutputList");
         _mainFileListView = this.GetLogicalDescendants().OfType<FileListView>().FirstOrDefault();
     }
@@ -189,11 +199,45 @@ public partial class MainWindow : Window
             _altPressed = true;
         }
 
-        var focused = FocusManager?.GetFocusedElement();
-        if (focused is TextBox) return;
-
         var vm = DataContext as MainViewModel;
         var modifiers = e.KeyModifiers;
+
+        // 窗口级快捷键优先于 TextBox 默认行为，确保地址栏和全局搜索随时可用。
+        if (vm is not null && modifiers == KeyModifiers.Control && e.Key == Key.L)
+        {
+            EnterAddressBarEditMode();
+            e.Handled = true;
+            return;
+        }
+        if (vm is not null && modifiers == KeyModifiers.Alt && e.Key == Key.D)
+        {
+            EnterAddressBarEditMode();
+            e.Handled = true;
+            return;
+        }
+        if (modifiers == KeyModifiers.Control && e.Key == Key.F)
+        {
+            FocusSearchBox();
+            e.Handled = true;
+            return;
+        }
+        if (modifiers == (KeyModifiers.Control | KeyModifiers.Shift) && e.Key == Key.F)
+        {
+            ShowGlobalSearchWindow();
+            e.Handled = true;
+            return;
+        }
+
+        var focused = FocusManager?.GetFocusedElement();
+        if (focused is TextBox)
+        {
+            if (e.Key == Key.Escape && vm?.ActivePane.IsAddressEditing == true)
+            {
+                vm.CancelAddressBarEdit();
+                e.Handled = true;
+            }
+            return;
+        }
 
         if (e.Key == Key.F5)
         {
@@ -230,9 +274,27 @@ public partial class MainWindow : Window
             vm?.PasteCommand.Execute().Subscribe();
             e.Handled = true;
         }
+        else if (modifiers == KeyModifiers.Control && e.Key == Key.Z)
+        {
+            vm?.UndoCommand.Execute().Subscribe();
+            e.Handled = true;
+        }
+        else if (modifiers == KeyModifiers.Control && e.Key == Key.Y)
+        {
+            vm?.RedoCommand.Execute().Subscribe();
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Space && modifiers == KeyModifiers.None)
+        {
+            vm?.QuickLookCommand.Execute(vm.ActivePane.SelectedItems.FirstOrDefault()).Subscribe();
+            e.Handled = true;
+        }
         else if (e.Key == Key.Delete)
         {
-            vm?.DeleteCommand.Execute().Subscribe();
+            if ((modifiers & KeyModifiers.Shift) != 0)
+                vm?.ForceDeleteCommand.Execute().Subscribe();
+            else
+                vm?.DeleteCommand.Execute().Subscribe();
             e.Handled = true;
         }
         else if (e.Key == Key.F2)
@@ -292,7 +354,15 @@ public partial class MainWindow : Window
     {
         if (DataContext is MainViewModel vm)
         {
+            vm.ActivePane.AddressText = vm.ActivePane.CurrentLocation.Display;
             vm.ActivePane.IsAddressEditing = true;
+            Dispatcher.UIThread.Post(() =>
+            {
+                var addressBox = this.GetLogicalDescendants().OfType<BreadcrumbBar>().FirstOrDefault()
+                    ?.FindControl<TextBox>("AddressTextBox");
+                addressBox?.Focus();
+                addressBox?.SelectAll();
+            });
         }
     }
 
@@ -300,7 +370,7 @@ public partial class MainWindow : Window
     {
         if (DataContext is MainViewModel vm)
         {
-            vm.ActivePane.IsAddressEditing = false;
+            vm.CancelAddressBarEdit();
         }
     }
 
@@ -315,7 +385,15 @@ public partial class MainWindow : Window
 
     private Control? BuildPreviewPane()
     {
-        return null;
+        return this.FindControl<PreviewPane>("PreviewPaneControl");
+    }
+
+    private void FocusSearchBox()
+    {
+        var searchBox = this.GetLogicalDescendants().OfType<ToolBar>().FirstOrDefault()
+            ?.FindControl<TextBox>("SearchBox");
+        searchBox?.Focus();
+        searchBox?.SelectAll();
     }
 
     private void LoadWindowRectFromConfig()
@@ -369,6 +447,30 @@ public partial class MainWindow : Window
         commandPalette.ShowDialog(this);
     }
 
+    private void ShowGlobalSearchWindow()
+    {
+        if (DataContext is not MainViewModel vm)
+            return;
+
+        var services = Program.Services;
+        var providers = services?.GetService<IProviderRegistry>();
+        var commands = services?.GetService<ICommandRegistry>();
+        var guiHost = services?.GetService<GuiHost>();
+        if (providers is null || commands is null || guiHost is null)
+            return;
+
+        var searchWindow = new GlobalSearchWindow(_i18n)
+        {
+            DataContext = new GlobalSearchViewModel(
+                providers,
+                commands,
+                guiHost,
+                _i18n,
+                item => vm.NavigateCommand.Execute(item.Path.GetParent()).Subscribe()),
+        };
+        searchWindow.ShowDialog(this);
+    }
+
     private TreeViewItem MakeNavTreeItem(string label, object? icon = null)
     {
         var navPane = this.FindControl<NavigationPane>("NavPaneControl");
@@ -402,7 +504,7 @@ public partial class MainWindow : Window
         {
             _i18n.LocaleChanged -= OnLocaleChanged;
         }
-        if (DataContext is IDisposable disposable)
+        if (_ownsDataContext && DataContext is IDisposable disposable)
         {
             disposable.Dispose();
         }
@@ -446,6 +548,66 @@ public partial class MainWindow : Window
     private void OnExitClicked(object? sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    private async void OnNewWindowClicked(object? sender, RoutedEventArgs e)
+    {
+        var services = Program.Services;
+        var guiHost = services?.GetService<GuiHost>();
+        if (services is null || guiHost is null)
+            return;
+
+        var initialLocation = DataContext is MainViewModel vm
+            ? vm.ActivePane.CurrentLocation
+            : guiHost.CurrentLocation;
+        var newVm = new MainViewModel(
+            services.GetRequiredService<IProviderRegistry>(),
+            services.GetRequiredService<ICommandRegistry>(),
+            services.GetRequiredService<IOperationEngine>(),
+            services.GetRequiredService<IDialogService>(),
+            services.GetRequiredService<ITaskCenter>(),
+            initialLocation,
+            services.GetRequiredService<IErrorStream>(),
+            guiHost.DispatchAsync,
+            () => guiHost.CommandCancellation.Token,
+            services.GetService<IClipboardService>(),
+            services.GetService<IUndoService>(),
+            services.GetService<IQuickLookWindow>(),
+            services.GetService<IPreviewService>(),
+            _i18n,
+            sessionTabs: null);
+        try
+        {
+            await newVm.InitializeTabsAsync().ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            newVm.Dispose();
+            await guiHost.WriteOutputLineAsync($"Failed to initialize the new window: {ex.Message}");
+            return;
+        }
+        var window = new MainWindow(_i18n)
+        {
+            DataContext = newVm,
+        };
+        window.Show(this);
+    }
+
+    private void OnViewModeClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm
+            || sender is not MenuItem menuItem
+            || menuItem.Tag is not string tag)
+            return;
+
+        var mode = tag switch
+        {
+            "gui.viewMode.icons" => ViewMode.Icons,
+            "gui.viewMode.tiles" => ViewMode.Tiles,
+            "gui.viewMode.list" => ViewMode.List,
+            _ => ViewMode.Details,
+        };
+        vm.ViewMode = mode;
     }
 
     private void OnThemeClicked(object? sender, RoutedEventArgs e)

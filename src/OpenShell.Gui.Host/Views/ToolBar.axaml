@@ -16,6 +16,7 @@
         </Border>
         <TextBox Grid.Column="1" Classes="SearchBox" Watermark="gui.search.watermark"
                  AutomationProperties.Name="gui.search.watermark" Margin="8,0,0,0"
+                 x:Name="SearchBox"
                  Text="{Binding SearchText, Mode=TwoWay}" />
       </Grid>
 
@@ -46,6 +47,13 @@
             <TextBlock Text="gui.tool.newFolder" VerticalAlignment="Center" />
           </StackPanel>
         </Button>
+        <Button x:Name="NewFileButton" ToolTip.Tip="gui.tool.newFile" AutomationProperties.Name="gui.tool.newFile"
+                Command="{Binding NewFileCommand}" Classes="ToolBarButton">
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <TextBlock Text="＋" FontSize="18" Foreground="{DynamicResource ShellAccentBrush}" VerticalAlignment="Center"/>
+            <TextBlock Text="gui.tool.newFile" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
 
         <Separator Classes="CommandSeparator" />
 
@@ -60,6 +68,15 @@
         <Button x:Name="PasteButton" ToolTip.Tip="gui.tool.paste" AutomationProperties.Name="gui.tool.paste"
                 Command="{Binding PasteCommand}" Classes="ToolBarButton IconOnly">
           <Viewbox Width="18" Height="18"><Path Data="{DynamicResource IconContentPaste}" Fill="{DynamicResource ShellTextPrimaryBrush}"/></Viewbox>
+        </Button>
+
+        <Button x:Name="UndoButton" ToolTip.Tip="gui.edit.undo" AutomationProperties.Name="gui.edit.undo"
+                Command="{Binding UndoCommand}" Classes="ToolBarButton IconOnly">
+          <TextBlock Text="↶" FontSize="18" VerticalAlignment="Center"/>
+        </Button>
+        <Button x:Name="RedoButton" ToolTip.Tip="gui.edit.redo" AutomationProperties.Name="gui.edit.redo"
+                Command="{Binding RedoCommand}" Classes="ToolBarButton IconOnly">
+          <TextBlock Text="↷" FontSize="18" VerticalAlignment="Center"/>
         </Button>
 
         <Separator Classes="CommandSeparator" />

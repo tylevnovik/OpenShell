@@ -266,87 +266,8 @@ public sealed class GuiHost : OpenShell.IHost, IDisposable
         await ctx.Host.WriteItemsAsync(stream, ct);
     }
 
-    // M3 简化：参数解析逻辑复用 CliHost 的实现（直接 inline，避免暴露 CliHost）。
     private static object ParseArgs(CommandDescriptor desc, string[] tokens)
-    {
-        var boolParamNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var p in desc.Parameters)
-        {
-            if (p.Type == typeof(bool))
-            {
-                boolParamNames.Add(p.Name);
-                foreach (var a in p.Aliases ?? []) boolParamNames.Add(a.TrimStart('-'));
-            }
-        }
-
-        var positional = new List<string?>();
-        var named = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-
-        for (int i = 0; i < tokens.Length; i++)
-        {
-            var t = tokens[i];
-            if (t.StartsWith("-") && t.Length > 1)
-            {
-                var key = t.TrimStart('-');
-                if (boolParamNames.Contains(key))
-                {
-                    named[key] = "true";
-                    continue;
-                }
-                if (i + 1 < tokens.Length && !tokens[i + 1].StartsWith("-"))
-                {
-                    named[key] = tokens[++i];
-                }
-                else
-                {
-                    named[key] = "true";
-                }
-            }
-            else
-            {
-                positional.Add(t);
-            }
-        }
-
-        var constructor = desc.ArgsType.GetConstructors().First();
-        var parameters = constructor.GetParameters();
-        var argsValues = new object?[parameters.Length];
-
-        foreach (var p in parameters)
-        {
-            var pdesc = desc.Parameters.FirstOrDefault(p2 => string.Equals(p2.Name, p.Name, StringComparison.OrdinalIgnoreCase));
-            if (pdesc is null) { argsValues[Array.IndexOf(parameters, p)] = null; continue; }
-
-            var paramAttr = pdesc.ParameterAttribute;
-            if (paramAttr?.Position >= 0 && paramAttr.Position < positional.Count && positional[paramAttr.Position] is { } posValue)
-            {
-                argsValues[Array.IndexOf(parameters, p)] = ConvertValue(p.ParameterType, posValue);
-            }
-            else if (named.TryGetValue(p.Name!, out var nValue))
-            {
-                argsValues[Array.IndexOf(parameters, p)] = ConvertValue(p.ParameterType, nValue!);
-            }
-            else
-            {
-                var matched = false;
-                foreach (var alias in paramAttr?.Aliases ?? [])
-                {
-                    if (named.TryGetValue(alias.TrimStart('-'), out var aValue))
-                    {
-                        argsValues[Array.IndexOf(parameters, p)] = ConvertValue(p.ParameterType, aValue!);
-                        matched = true;
-                        break;
-                    }
-                }
-                if (!matched)
-                {
-                    argsValues[Array.IndexOf(parameters, p)] = p.HasDefaultValue ? p.DefaultValue : null;
-                }
-            }
-        }
-
-        return constructor.Invoke(argsValues) ?? throw new InvalidOperationException("Args constructor returned null.");
-    }
+        => CommandArgumentBinder.Bind(desc, tokens, ConvertValue);
 
     private static object? ConvertValue(Type targetType, string value)
     {

@@ -67,3 +67,11 @@ public sealed class ConfigurationErrorException : OpenShellException
     public ConfigurationErrorException(string message, Exception innerException) : base(message, innerException) { }
     public override ErrorCategory Category => ErrorCategory.ConfigurationError;
 }
+
+/// <summary>命令参数无法绑定到 Args record 时抛出的领域异常。</summary>
+public sealed class CommandArgumentException : OpenShellException
+{
+    public CommandArgumentException(string message) : base(message) { }
+    public CommandArgumentException(string message, Exception innerException) : base(message, innerException) { }
+    public override ErrorCategory Category => ErrorCategory.InvalidArgument;
+}

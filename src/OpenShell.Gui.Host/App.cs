@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OpenShell.Gui.Host.Services;
 using OpenShell.Gui.Host.ViewModels;
 using OpenShell.I18n;
+using OpenShell.Preview;
 using OpenShell.Sessions;
 
 namespace OpenShell.Gui.Host;
@@ -54,6 +55,7 @@ internal sealed partial class App : Application
                 services.GetService<Clipboard.IClipboardService>(),
                 services.GetService<History.IUndoService>(),
                 services.GetService<Commands.Builtins.IQuickLookWindow>(),
+                services.GetService<IPreviewService>(),
                 i18n,
                 sessionTabs);
 

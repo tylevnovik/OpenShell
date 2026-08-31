@@ -25,7 +25,7 @@
       <!-- MenuVisible binding applied in code-behind when DataContext is set -->
       <MenuItem Header="gui.menu.file" Tag="gui.menu.file">
         <MenuItem Header="gui.menu.openConsole" Command="{Binding ToggleConsoleCommand}" />
-        <MenuItem Header="gui.menu.newWindow" />
+        <MenuItem Header="gui.menu.newWindow" Click="OnNewWindowClicked" />
         <Separator />
         <MenuItem Header="gui.menu.newTab" InputGesture="Ctrl+T" Command="{Binding NewTabCommand}" />
         <MenuItem Header="gui.menu.closeTab" InputGesture="Ctrl+W" Command="{Binding CloseTabCommand}" />
@@ -45,10 +45,10 @@
           <MenuItem Header="gui.theme.system" Tag="gui.theme.system" Click="OnThemeClicked" />
         </MenuItem>
         <MenuItem Header="gui.menu.viewMode" Tag="gui.menu.viewMode">
-          <MenuItem Header="gui.viewMode.details" Tag="gui.viewMode.details" />
-          <MenuItem Header="gui.viewMode.icons" Tag="gui.viewMode.icons" />
-          <MenuItem Header="gui.viewMode.tiles" Tag="gui.viewMode.tiles" />
-          <MenuItem Header="gui.viewMode.list" Tag="gui.viewMode.list" />
+          <MenuItem Header="gui.viewMode.details" Tag="gui.viewMode.details" Click="OnViewModeClicked" />
+          <MenuItem Header="gui.viewMode.icons" Tag="gui.viewMode.icons" Click="OnViewModeClicked" />
+          <MenuItem Header="gui.viewMode.tiles" Tag="gui.viewMode.tiles" Click="OnViewModeClicked" />
+          <MenuItem Header="gui.viewMode.list" Tag="gui.viewMode.list" Click="OnViewModeClicked" />
         </MenuItem>
         <Separator />
         <MenuItem Header="gui.menu.toggleConsole" Command="{Binding ToggleConsoleCommand}" />
@@ -143,6 +143,8 @@
         <ColumnDefinition Width="*" />
         <ColumnDefinition Width="Auto" />
         <ColumnDefinition Width="Auto" />
+        <ColumnDefinition Width="Auto" />
+        <ColumnDefinition Width="320" MinWidth="240" />
       </Grid.ColumnDefinitions>
 
       <views:NavigationPane Grid.Column="0" x:Name="NavPaneControl"/>
@@ -170,6 +172,18 @@
                          x:Name="DetailsPaneControl"
                          Width="280"
                          IsVisible="{Binding IsDetailsPaneVisible}" />
+
+      <GridSplitter Grid.Column="5"
+                    Width="4"
+                    IsVisible="{Binding IsPreviewPaneVisible}"
+                    ResizeDirection="Columns"
+                    Background="Transparent"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch" />
+
+      <views:PreviewPane Grid.Column="6"
+                         x:Name="PreviewPaneControl"
+                         IsVisible="{Binding IsPreviewPaneVisible}" />
     </Grid>
   </DockPanel>
 </Window>
