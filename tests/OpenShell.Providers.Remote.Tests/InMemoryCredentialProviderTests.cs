@@ -1,4 +1,5 @@
 using FluentAssertions;
+using OpenShell.Security;
 using OpenShell.Providers.Remote;
 using OpenShell.TestUtils;
 using Xunit;
@@ -127,6 +128,31 @@ public class InMemoryCredentialProviderTests : IDisposable
     }
 
     [Fact]
+    public void SetCredentials_WhenSecretStoreFails_RestoresPreviousValue()
+    {
+        var secrets = new ToggleSecretStore();
+        var provider = new InMemoryCredentialProvider(CredFilePath, secrets);
+        provider.SetCredentials(new SftpCredentials
+        {
+            Host = "example.com",
+            User = "alice",
+            Password = "old-pw",
+        });
+
+        secrets.FailWrites = true;
+        var act = () => provider.SetCredentials(new SftpCredentials
+        {
+            Host = "example.com",
+            User = "alice",
+            Password = "new-pw",
+        });
+
+        act.Should().Throw<IOException>();
+        provider.GetCredentials("example.com", "alice")!.Password.Should().Be("old-pw");
+        secrets.GetSecret("sftp/example.com/alice/password").Should().Be("old-pw");
+    }
+
+    [Fact]
     public void SetCredentials_SameHostDifferentUser_KeepsBoth()
     {
         var provider = CreateProvider();
@@ -170,13 +196,16 @@ public class InMemoryCredentialProviderTests : IDisposable
             Port = 2222,
         });
 
-        // 文件存在且包含 password。
+        // 凭据元数据文件存在，但不能包含 password 明文；秘密写入旁路加密存储。
         File.Exists(CredFilePath).Should().BeTrue();
         var json = File.ReadAllText(CredFilePath);
         json.Should().Contain("example.com");
         json.Should().Contain("alice");
-        json.Should().Contain("s3cret");
+        json.Should().NotContain("s3cret");
         json.Should().Contain("2222");
+        var secretFile = CredFilePath + ".secrets";
+        File.Exists(secretFile).Should().BeTrue();
+        File.ReadAllText(secretFile).Should().NotContain("s3cret");
     }
 
     // ---- ListCredentials ----
@@ -417,5 +446,40 @@ public class InMemoryCredentialProviderTests : IDisposable
         cred!.PrivateKeyPath.Should().Be("/home/alice/.ssh/id_rsa");
         cred.PrivateKeyPassphrase.Should().Be("passphrase-secret");
         cred.Port.Should().Be(2222);
+    }
+
+    [Fact]
+    public void CorruptedCredentialFile_SurfacesPersistenceError()
+    {
+        // IH-013: 凭据库损坏时不能静默伪装成"没有凭据"; 错误必须暴露给宿主。
+        System.IO.File.WriteAllText(CredFilePath, "{ this is not valid json");
+
+        var provider = CreateProvider();
+
+        provider.LastPersistenceError.Should().NotBeNull();
+        provider.LastPersistenceError.Should().Contain("Credential store load failed");
+        provider.GetCredentials("example.com", "alice").Should().BeNull();
+    }
+
+    private sealed class ToggleSecretStore : ISecretStore
+    {
+        private readonly Dictionary<string, string> _values = new(StringComparer.Ordinal);
+
+        public bool FailWrites { get; set; }
+
+        public string? GetSecret(string key)
+            => _values.TryGetValue(key, out var value) ? value : null;
+
+        public void SetSecret(string key, string value)
+        {
+            if (FailWrites) throw new IOException("secret store failure");
+            _values[key] = value;
+        }
+
+        public void RemoveSecret(string key)
+        {
+            if (FailWrites) throw new IOException("secret store failure");
+            _values.Remove(key);
+        }
     }
 }

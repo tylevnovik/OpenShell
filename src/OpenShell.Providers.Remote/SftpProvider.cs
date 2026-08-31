@@ -442,6 +442,9 @@ public sealed class SftpProvider :
 
     public void Dispose() => _pool.Dispose();
 
+    /// <summary>IH-006: 测试入口——强制断开所有池化连接, 下一次操作触发重连。</summary>
+    internal void DisconnectPooledConnections() => _pool.DisconnectAll();
+
     // ---- 路径解析 helpers ----
 
     /// <summary>
@@ -806,6 +809,21 @@ internal sealed class SftpConnectionPool : IDisposable
             {
                 conn.Dispose();
             }
+            _connections.Clear();
+        }
+    }
+
+    /// <summary>
+    /// IH-006: 故障注入测试入口——断开并移除所有池化连接。
+    /// 下一次 <see cref="ExecuteAsync{TResult}"/> 会重新建连, 用于验证断线重连行为。
+    /// </summary>
+    internal void DisconnectAll()
+    {
+        lock (_lock)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            foreach (var conn in _connections.Values)
+                conn.Dispose();
             _connections.Clear();
         }
     }

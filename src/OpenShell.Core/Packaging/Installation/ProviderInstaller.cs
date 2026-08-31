@@ -58,6 +58,8 @@ public sealed class ProviderInstaller : IProviderInstaller
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Provider name is required.", nameof(name));
+        if (string.IsNullOrWhiteSpace(version) == false)
+            ValidatePackageVersionSegment(version!);
 
         OpenShellPaths.EnsurePackagingDirs();
 
@@ -156,6 +158,12 @@ public sealed class ProviderInstaller : IProviderInstaller
         // 6) 验签。
         await using var pkg = await OspPackage.OpenAsync(cachePath, cancellationToken).ConfigureAwait(false);
         var manifest = await pkg.ReadManifestAsync(cancellationToken).ConfigureAwait(false);
+        if (!string.Equals(manifest.Name, name, StringComparison.OrdinalIgnoreCase))
+            throw new OspPackageException(
+                $"Package manifest name '{manifest.Name}' does not match requested provider '{name}'.");
+        if (!string.Equals(manifest.Version, resolvedVersion, StringComparison.OrdinalIgnoreCase))
+            throw new OspPackageException(
+                $"Package manifest version '{manifest.Version}' does not match requested version '{resolvedVersion}'.");
         var (sig, pub) = pkg.ReadSignature();
         var payloadHash = await pkg.ComputePayloadHashAsync(manifest, cancellationToken).ConfigureAwait(false);
         var sigResult = await _signatureVerifier.VerifyAsync(manifest, payloadHash, pub, sig, matchedSource.Trusted, cancellationToken).ConfigureAwait(false);
@@ -236,26 +244,13 @@ public sealed class ProviderInstaller : IProviderInstaller
         // 8) API 兼容性校验 (ADR-0038)。
         ApiCompatibilityChecker.Verify(manifest.ToProviderInfo());
 
-        // 9) 解压到 ~/.openshell/providers/{name}/{version}/。
-        var installDir = Path.Combine(_providersDir, SanitiseDir(name), resolvedVersion);
-        if (Directory.Exists(installDir)) Directory.Delete(installDir, recursive: true);
-        Directory.CreateDirectory(installDir);
-        await pkg.ExtractToAsync(installDir, cancellationToken).ConfigureAwait(false);
-
-        // 10) 更新 current 符号链接 (跨平台用 junction 或目录复制 fallback)。
-        var currentPath = await UpdateCurrentLinkAsync(name, resolvedVersion, cancellationToken).ConfigureAwait(false);
-
-        // 11) 更新 plugins.config.toml。
+        // 9-11) 先解压到 staging, 再一次性切换版本/current/config。
+        // 任一步失败都恢复旧目录、current 和配置, 避免“安装成功但启动找不到插件”。
+        ValidatePackageVersionSegment(resolvedVersion);
         var existing = _pluginsConfig.TryGet(name);
-        _pluginsConfig.Upsert(new ProviderEntry
-        {
-            Name = name,
-            Enabled = existing?.Enabled ?? true,
-            LoadOrder = existing?.LoadOrder ?? 100,
-            AutoUpdate = existing?.AutoUpdate ?? false,
-            Config = existing?.Config ?? new Dictionary<string, object?>(),
-        });
-        await _pluginsConfig.SaveAsync(cancellationToken).ConfigureAwait(false);
+        var installDir = Path.Combine(_providersDir, SanitiseDir(name), resolvedVersion);
+        var currentPath = await InstallVersionTransactionalAsync(
+            name, resolvedVersion, pkg, existing, cancellationToken).ConfigureAwait(false);
 
         _logger?.LogInformation("Installed provider '{Name}' v{Version} to {Path}.", name, resolvedVersion, installDir);
 
@@ -270,6 +265,114 @@ public sealed class ProviderInstaller : IProviderInstaller
             Dependencies = deps,
             Summary = $"Installed '{name}' v{resolvedVersion} from '{matchedSource.Name}'.",
         };
+    }
+
+    private async Task<string> InstallVersionTransactionalAsync(
+        string name,
+        string version,
+        OspPackage package,
+        ProviderEntry? existing,
+        CancellationToken ct)
+    {
+        var providerRoot = Path.Combine(_providersDir, SanitiseDir(name));
+        var installDir = Path.Combine(providerRoot, version);
+        var currentPath = Path.Combine(providerRoot, "current");
+        var stagingDir = Path.Combine(providerRoot, $".staging-{Guid.NewGuid():N}");
+        var installBackup = Path.Combine(providerRoot, $".backup-{version}-{Guid.NewGuid():N}");
+        var currentBackup = Path.Combine(providerRoot, $".current-backup-{Guid.NewGuid():N}");
+        var hadInstall = PathExists(installDir);
+        var hadCurrent = PathExists(currentPath);
+        var configChanged = false;
+        var committed = false;
+        var installActivated = false;
+        var currentMoved = false;
+        var currentActivated = false;
+
+        try
+        {
+            Directory.CreateDirectory(providerRoot);
+            await package.ExtractToAsync(stagingDir, ct).ConfigureAwait(false);
+
+            if (hadInstall)
+                MovePath(installDir, installBackup);
+            MovePath(stagingDir, installDir);
+            installActivated = true;
+
+            if (hadCurrent)
+            {
+                MovePath(currentPath, currentBackup);
+                currentMoved = true;
+            }
+
+            await UpdateCurrentLinkAsync(name, version, ct).ConfigureAwait(false);
+            if (!PathExists(currentPath))
+                throw new IOException($"Failed to create current provider link at '{currentPath}'.");
+            currentActivated = true;
+
+            _pluginsConfig.Upsert(new ProviderEntry
+            {
+                Name = name,
+                Enabled = existing?.Enabled ?? true,
+                LoadOrder = existing?.LoadOrder ?? 100,
+                AutoUpdate = existing?.AutoUpdate ?? false,
+                Config = existing?.Config ?? new Dictionary<string, object?>(),
+            });
+            configChanged = true;
+            await _pluginsConfig.SaveAsync(ct).ConfigureAwait(false);
+
+            committed = true;
+            try { DeletePath(installBackup); } catch (Exception ex) { _logger?.LogWarning(ex, "Failed to remove install backup '{Path}'.", installBackup); }
+            try { DeletePath(currentBackup); } catch (Exception ex) { _logger?.LogWarning(ex, "Failed to remove current backup '{Path}'.", currentBackup); }
+            return currentPath;
+        }
+        catch
+        {
+            // 恢复配置时只触碰当前 provider, 不覆盖其他 provider 的并发更新。
+            if (configChanged)
+            {
+                try
+                {
+                    if (existing is null) _pluginsConfig.Remove(name);
+                    else _pluginsConfig.Upsert(existing);
+                    await _pluginsConfig.SaveAsync(CancellationToken.None).ConfigureAwait(false);
+                }
+                catch (Exception rollbackEx)
+                {
+                    _logger?.LogError(rollbackEx, "Failed to roll back plugins.config for '{Name}'.", name);
+                }
+            }
+
+            if (installActivated)
+            {
+                try { DeletePath(installDir); } catch { /* best-effort rollback */ }
+            }
+            if (currentActivated && PathExists(currentPath))
+            {
+                try { DeletePath(currentPath); } catch { /* best-effort rollback */ }
+            }
+            if (currentMoved && PathExists(currentBackup))
+            {
+                try { MovePath(currentBackup, currentPath); } catch (Exception ex) { _logger?.LogError(ex, "Failed to restore current link for '{Name}'.", name); }
+            }
+
+            if (PathExists(installBackup))
+            {
+                try { MovePath(installBackup, installDir); } catch (Exception ex) { _logger?.LogError(ex, "Failed to restore installed version for '{Name}'.", name); }
+            }
+
+            try { DeletePath(stagingDir); } catch { /* best-effort rollback */ }
+            throw;
+        }
+        finally
+        {
+            // 成功路径已清理; 失败路径若恢复失败也不应留下可被误识别为版本的 staging。
+            try { DeletePath(stagingDir); } catch { }
+            if (committed)
+            {
+                try { DeletePath(installBackup); } catch { }
+                try { DeletePath(currentBackup); } catch { }
+            }
+        }
     }
 
     /// <inheritdoc />
@@ -489,6 +592,35 @@ public sealed class ProviderInstaller : IProviderInstaller
             try { CopyDirectory(versionDir, currentLink); } catch { /* best-effort */ }
         }
         return Task.FromResult(currentLink);
+    }
+
+    private static bool PathExists(string path)
+        => Directory.Exists(path) || File.Exists(path);
+
+    private static void MovePath(string source, string destination)
+    {
+        var parent = Path.GetDirectoryName(destination);
+        if (!string.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
+        if (Directory.Exists(source)) Directory.Move(source, destination);
+        else if (File.Exists(source)) File.Move(source, destination);
+        else throw new FileNotFoundException($"Path to move was not found: {source}", source);
+    }
+
+    private static void DeletePath(string path)
+    {
+        if (Directory.Exists(path)) Directory.Delete(path, recursive: true);
+        else if (File.Exists(path)) File.Delete(path);
+    }
+
+    private static void ValidatePackageVersionSegment(string version)
+    {
+        if (string.IsNullOrWhiteSpace(version)
+            || version is "." or ".."
+            || !string.Equals(Path.GetFileName(version), version, StringComparison.Ordinal)
+            || version.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            throw new OspPackageException($"Invalid provider version path segment: '{version}'.");
+        }
     }
 
     /// <summary>解析符号链接/junction 指向的目标路径。失败返回 null。</summary>

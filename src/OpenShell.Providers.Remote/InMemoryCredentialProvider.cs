@@ -1,14 +1,13 @@
 using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using OpenShell.Security;
 
 namespace OpenShell.Providers.Remote;
 
 /// <summary>
 /// 默认的 <see cref="ICredentialProvider"/> 实现: 从 <c>~/.openshell/sftp-credentials.json</c>
-/// 加载凭据到内存, 支持 Set/Get/Remove 操作并持久化。
-/// Per ADR-0019 §3: M4 简化版, password 暂以明文 JSON 存储, 文件权限 0600 (Unix)。
-/// TODO(M4+): 用 DPAPI (Windows) / OS keychain (Unix) 加密存储 password 字段。
+/// 加载非敏感元数据到内存，并把 password/private-key passphrase 交给加密秘密存储。
 /// </summary>
 /// <remarks>
 /// 凭据文件格式 (JSON 数组):
@@ -18,9 +17,9 @@ namespace OpenShell.Providers.Remote;
 ///     "host": "example.com",
 ///     "user": "alice",
 ///     "port": 22,
-///     "password": "secret",
+///     "passwordSecretKey": "sftp/example.com/alice/password",
 ///     "privateKeyPath": null,
-///     "privateKeyPassphrase": null
+///     "privateKeyPassphraseSecretKey": null
 ///   }
 /// ]
 /// </code>
@@ -36,18 +35,24 @@ public sealed class InMemoryCredentialProvider : ICredentialProvider
     };
 
     private readonly string _filePath;
+    private readonly ISecretStore _secretStore;
     private readonly List<SftpCredentials> _creds = new();
     private readonly object _lock = new();
 
     /// <summary>使用默认路径 <c>~/.openshell/sftp-credentials.json</c>。</summary>
-    public InMemoryCredentialProvider() : this(GetDefaultFilePath()) { }
+    public InMemoryCredentialProvider() : this(GetDefaultFilePath(), null) { }
 
     /// <summary>使用指定路径, 主要用于测试。</summary>
-    public InMemoryCredentialProvider(string filePath)
+    public InMemoryCredentialProvider(string filePath, ISecretStore? secretStore = null)
     {
         _filePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
+        // IH-012: macOS 用 Keychain, Windows 用 DPAPI 文件, Linux 用 0600 受保护文件。
+        _secretStore = secretStore ?? OpenShell.Security.SecretStoreFactory.CreateDefault(filePath + ".secrets");
         TryLoadFromFile();
     }
+
+    /// <summary>最近一次加载/持久化错误，不包含秘密值。启动可继续时由宿主展示此状态。</summary>
+    public string? LastPersistenceError { get; private set; }
 
     /// <inheritdoc />
     public SftpCredentials? GetCredentials(string host, string user)
@@ -86,12 +91,28 @@ public sealed class InMemoryCredentialProvider : ICredentialProvider
         ArgumentNullException.ThrowIfNull(cred);
         lock (_lock)
         {
-            // 先移除同 host+user 的旧凭据, 再追加新的。
-            _creds.RemoveAll(c =>
+            // 先保留旧值, 失败时同时恢复内存索引和秘密引用。
+            var previous = _creds.Where(c =>
                 string.Equals(c.Host, cred.Host, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(c.User, cred.User, StringComparison.OrdinalIgnoreCase));
+                && string.Equals(c.User, cred.User, StringComparison.OrdinalIgnoreCase)).ToList();
+            _creds.RemoveAll(c => previous.Contains(c));
             _creds.Add(cred);
-            TrySaveToFile();
+            try
+            {
+                PersistSecrets(cred);
+                SaveToFile();
+            }
+            catch
+            {
+                _creds.RemoveAll(c => ReferenceEquals(c, cred));
+                foreach (var old in previous)
+                {
+                    _creds.Add(old);
+                    try { PersistSecrets(old); } catch { /* best-effort rollback */ }
+                }
+                try { SaveToFile(); } catch { /* 保留原始异常, 但不再继续破坏内存状态 */ }
+                throw;
+            }
         }
     }
 
@@ -103,11 +124,30 @@ public sealed class InMemoryCredentialProvider : ICredentialProvider
         ArgumentNullException.ThrowIfNull(host);
         lock (_lock)
         {
-            var removed = _creds.RemoveAll(c =>
+            var removedCredentials = _creds.Where(c =>
                 string.Equals(c.Host, host, StringComparison.OrdinalIgnoreCase)
-                && (user is null || string.Equals(c.User, user, StringComparison.OrdinalIgnoreCase)));
+                && (user is null || string.Equals(c.User, user, StringComparison.OrdinalIgnoreCase))).ToList();
+            var removed = removedCredentials.Count;
             if (removed > 0)
-                TrySaveToFile();
+            {
+                _creds.RemoveAll(c => removedCredentials.Contains(c));
+                try
+                {
+                    foreach (var cred in removedCredentials)
+                        RemoveSecrets(cred);
+                    SaveToFile();
+                }
+                catch
+                {
+                    foreach (var cred in removedCredentials)
+                    {
+                        _creds.Add(cred);
+                        try { PersistSecrets(cred); } catch { /* best-effort rollback */ }
+                    }
+                    try { SaveToFile(); } catch { /* 保留原始异常 */ }
+                    throw;
+                }
+            }
             return removed > 0;
         }
     }
@@ -132,76 +172,119 @@ public sealed class InMemoryCredentialProvider : ICredentialProvider
             lock (_lock)
             {
                 _creds.Clear();
+                var migrated = false;
                 foreach (var r in list)
                 {
                     if (string.IsNullOrEmpty(r.Host) || string.IsNullOrEmpty(r.User))
                         continue;   // 跳过无效条目
+                    var secretBase = r.SecretKey ?? BuildSecretKey(r.Host, r.User);
+                    var passwordKey = r.PasswordSecretKey ?? secretBase + "/password";
+                    var passphraseKey = r.PrivateKeyPassphraseSecretKey ?? secretBase + "/private-key-passphrase";
+                    var password = r.Password;
+                    var passphrase = r.PrivateKeyPassphrase;
+                    if (password is not null)
+                    {
+                        _secretStore.SetSecret(passwordKey, password);
+                        migrated = true;
+                    }
+                    else
+                    {
+                        password = _secretStore.GetSecret(passwordKey);
+                    }
+                    if (passphrase is not null)
+                    {
+                        _secretStore.SetSecret(passphraseKey, passphrase);
+                        migrated = true;
+                    }
+                    else
+                    {
+                        passphrase = _secretStore.GetSecret(passphraseKey);
+                    }
                     _creds.Add(new SftpCredentials
                     {
                         Host = r.Host,
                         User = r.User,
                         Port = r.Port <= 0 ? 22 : r.Port,
-                        Password = r.Password,
+                        Password = password,
                         PrivateKeyPath = r.PrivateKeyPath,
-                        PrivateKeyPassphrase = r.PrivateKeyPassphrase,
+                        PrivateKeyPassphrase = passphrase,
                     });
                 }
+                if (migrated)
+                    SaveToFile();
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Per ADR-0019: 凭据加载失败不阻塞启动, 降级到空凭据列表。
-            // 真实部署中用户可手动修复或删除文件后重新配置。
+            // 保持启动可用，但把错误暴露给宿主，不能静默伪装成“没有凭据”。
+            LastPersistenceError = $"Credential store load failed: {ex.Message}";
+            lock (_lock) _creds.Clear();
         }
     }
 
-    private void TrySaveToFile()
+    private void SaveToFile()
     {
-        try
-        {
-            var dir = Path.GetDirectoryName(_filePath);
-            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
+        var dir = Path.GetDirectoryName(_filePath);
+        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            Directory.CreateDirectory(dir);
 
-            var list = _creds.Select(c => new CredRecord
+        var list = _creds.Select(c =>
+        {
+            var secretBase = BuildSecretKey(c.Host, c.User);
+            return new CredRecord
             {
                 Host = c.Host,
                 User = c.User,
                 Port = c.Port,
-                Password = c.Password,
                 PrivateKeyPath = c.PrivateKeyPath,
-                PrivateKeyPassphrase = c.PrivateKeyPassphrase,
-            }).ToList();
+                SecretKey = secretBase,
+                PasswordSecretKey = c.Password is null ? null : secretBase + "/password",
+                PrivateKeyPassphraseSecretKey = c.PrivateKeyPassphrase is null ? null : secretBase + "/private-key-passphrase",
+            };
+        }).ToList();
 
-            var json = JsonSerializer.Serialize(list, JsonOpts);
-
-            // 先写入临时文件再原子替换, 避免中途崩溃导致凭据文件损坏。
-            var tmp = _filePath + ".tmp";
+        var json = JsonSerializer.Serialize(list, JsonOpts);
+        var tmp = _filePath + ".tmp-" + Guid.NewGuid().ToString("N");
+        try
+        {
             File.WriteAllText(tmp, json);
             if (File.Exists(_filePath))
                 File.Replace(tmp, _filePath, destinationBackupFileName: null);
             else
                 File.Move(tmp, _filePath);
-
-            // Unix: 设置文件权限 0600 (仅 owner 可读写)。Windows 用 ACL, 此处不处理。
             if (!OperatingSystem.IsWindows())
-            {
-                try
-                {
-                    File.SetUnixFileMode(_filePath,
-                        System.IO.UnixFileMode.UserRead | System.IO.UnixFileMode.UserWrite);
-                }
-                catch
-                {
-                    // 平台不支持 SetUnixFileMode 时忽略。
-                }
-            }
+                File.SetUnixFileMode(_filePath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            LastPersistenceError = null;
         }
-        catch
+        catch (Exception ex)
         {
-            // 持久化失败不抛: 内存中的凭据仍可用于本次会话, 下次启动丢失。
+            LastPersistenceError = $"Credential store save failed: {ex.Message}";
+            throw;
+        }
+        finally
+        {
+            try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
         }
     }
+
+    private void PersistSecrets(SftpCredentials cred)
+    {
+        var secretBase = BuildSecretKey(cred.Host, cred.User);
+        if (cred.Password is null) _secretStore.RemoveSecret(secretBase + "/password");
+        else _secretStore.SetSecret(secretBase + "/password", cred.Password);
+        if (cred.PrivateKeyPassphrase is null) _secretStore.RemoveSecret(secretBase + "/private-key-passphrase");
+        else _secretStore.SetSecret(secretBase + "/private-key-passphrase", cred.PrivateKeyPassphrase);
+    }
+
+    private void RemoveSecrets(SftpCredentials cred)
+    {
+        var secretBase = BuildSecretKey(cred.Host, cred.User);
+        _secretStore.RemoveSecret(secretBase + "/password");
+        _secretStore.RemoveSecret(secretBase + "/private-key-passphrase");
+    }
+
+    private static string BuildSecretKey(string host, string user)
+        => $"sftp/{host}/{user}";
 
     private static string GetDefaultFilePath()
     {
@@ -215,8 +298,12 @@ public sealed class InMemoryCredentialProvider : ICredentialProvider
         public string Host { get; init; } = "";
         public string User { get; init; } = "";
         public int Port { get; init; } = 22;
+        // 仅为旧版明文文件迁移保留；新文件不会序列化此字段。
         public string? Password { get; init; }
         public string? PrivateKeyPath { get; init; }
         public string? PrivateKeyPassphrase { get; init; }
+        public string? SecretKey { get; init; }
+        public string? PasswordSecretKey { get; init; }
+        public string? PrivateKeyPassphraseSecretKey { get; init; }
     }
 }

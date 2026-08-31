@@ -4,6 +4,7 @@ using OpenShell.Packaging;
 using OpenShell.Packaging.Installation;
 using OpenShell.Packaging.Registry;
 using OpenShell.Packaging.Signing;
+using OpenShell.Providers;
 using OpenShell.TestUtils;
 using Xunit;
 
@@ -120,6 +121,67 @@ public class ProviderInstallerTests
         Directory.Exists(Path.Combine(providersDir, "to-remove")).Should().BeFalse();
         await pluginsConfig.LoadAsync();
         pluginsConfig.TryGet("to-remove").Should().BeNull();
+    }
+
+    [Fact]
+    public async Task InstallAsync_WhenConfigCommitFails_RestoresPreviousCurrentAndVersion()
+    {
+        using var dir = new TempDir();
+        var providersDir = dir.CreateDirectory("providers");
+        var providerRoot = Path.Combine(providersDir, "transaction-provider");
+        var oldVersion = Path.Combine(providerRoot, "1.0.0");
+        Directory.CreateDirectory(oldVersion);
+        File.WriteAllText(Path.Combine(oldVersion, "old.txt"), "old");
+        var oldCurrent = Path.Combine(providerRoot, "current");
+        Directory.CreateDirectory(oldCurrent);
+        File.WriteAllText(Path.Combine(oldCurrent, "old.txt"), "old");
+
+        // 把配置路径设为已有目录, 让提交阶段稳定失败, 以验证回滚而非依赖权限环境。
+        var invalidConfigPath = dir.CreateDirectory("plugins.config.toml");
+        var pluginsConfig = new PluginsConfig(invalidConfigPath);
+        pluginsConfig.Upsert(new ProviderEntry { Name = "transaction-provider", Enabled = true });
+        var sources = new ProviderSourceRegistry(Path.Combine(dir.FullPath, "registries.toml"));
+        var client = Substitute.For<RegistryClient>();
+        sources.AddSource(new ProviderSource { Name = "official", Url = "https://x", Trusted = true });
+
+        var manifest = new ProviderManifest
+        {
+            Name = "transaction-provider",
+            Version = "2.0.0",
+            RequiredApiVersion = "1.0.0",
+        };
+        var payload = dir.GetFullPath("provider.dll");
+        File.WriteAllText(payload, "test payload");
+        var packagePath = await OspPackage.CreateAsync(manifest, new[] { payload }, dir.FullPath);
+        client.GetPackageAsync(Arg.Any<ProviderSource>(), "transaction-provider", Arg.Any<CancellationToken>())
+            .Returns(new PackageInfo
+            {
+                Name = "transaction-provider",
+                Latest = "2.0.0",
+                Versions = new[] { new PackageVersionInfo { Version = "2.0.0" } },
+            });
+        client.DownloadPackageAsync(
+                Arg.Any<ProviderSource>(),
+                "transaction-provider",
+                "2.0.0",
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                var destination = callInfo.ArgAt<string>(3);
+                File.Copy(packagePath, destination, overwrite: true);
+                return Task.FromResult(destination);
+            });
+
+        var installer = new ProviderInstaller(
+            sources, client, new NullSignatureVerifier(), pluginsConfig, providersDir: providersDir);
+
+        var act = async () => await installer.InstallAsync("transaction-provider", "2.0.0");
+
+        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+        Directory.Exists(Path.Combine(providerRoot, "2.0.0")).Should().BeFalse();
+        File.ReadAllText(Path.Combine(oldVersion, "old.txt")).Should().Be("old");
+        File.ReadAllText(Path.Combine(oldCurrent, "old.txt")).Should().Be("old");
     }
 
     private static ProviderInstaller CreateInstaller(TempDir dir, string? providersDir = null)

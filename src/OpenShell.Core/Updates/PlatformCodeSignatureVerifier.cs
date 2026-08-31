@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
@@ -7,7 +9,7 @@ namespace OpenShell.Updates;
 /// 默认 <see cref="ICodeSignatureVerifier"/> 实现: 调用平台原生 API 校验代码签名。Per ADR-0037 §5.
 /// <list type="bullet">
 ///   <item>Windows: P/Invoke <c>wintrust.dll!WinVerifyTrust</c> (Authenticode).</item>
-///   <item>macOS: P/Invoke <c>Security.framework!SecStaticCodeCheckValidity</c> (Developer ID / notarization).</item>
+///   <item>macOS: 调用系统 <c>codesign --verify --deep --strict</c> (Developer ID 签名校验).</item>
 ///   <item>Linux / 其他: 无平台标准, 返回 true (no-op) 并附 TODO 注释。</item>
 /// </list>
 /// 所有 P/Invoke 都用 <see cref="OperatingSystem.IsWindows()"/> / <see cref="OperatingSystem.IsMacOS()"/> 守卫,
@@ -16,44 +18,70 @@ namespace OpenShell.Updates;
 public sealed class PlatformCodeSignatureVerifier : ICodeSignatureVerifier
 {
     /// <inheritdoc />
-    public Task<bool> VerifyAsync(string filePath, CancellationToken cancellationToken = default)
+    public async Task<bool> VerifyAsync(string filePath, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(filePath);
         cancellationToken.ThrowIfCancellationRequested();
-        if (!File.Exists(filePath)) return Task.FromResult(false);
+        if (!File.Exists(filePath)) return false;
 
-        bool result;
         if (OperatingSystem.IsWindows())
         {
-            result = VerifyWindowsAuthenticode(filePath);
+            return VerifyWindowsAuthenticode(filePath);
         }
         else if (OperatingSystem.IsMacOS())
         {
-            // TODO(ADR-0037 §5): macOS SecStaticCodeCheckValidity P/Invoke 完整实现。
-            // 当前签名框架 (Security.framework) 需链接 .dylib, 在 .NET 8 中通过 NativeLibrary.Load 完成。
-            // 为避免在未配置 macOS 链接器的开发机上抛 DllNotFoundException, 此处暂返回 true,
-            // 后续 milestone 引入 ObjC 桥接后再做完整 Developer ID / notarization ticket 校验。
-            result = true;
+            return await VerifyMacOSCodeSignatureAsync(filePath, cancellationToken).ConfigureAwait(false);
         }
         else
         {
             // Linux 无平台标准代码签名机制, 按设计返回 true (no-op)。
             // 包内容完整性已由 SHA256 ( caller ) + Ed25519 (provider packages) 校验。
-            result = true;
+            return true;
         }
-        return Task.FromResult(result);
+    }
+
+    [SupportedOSPlatform("macos")]
+    private static async Task<bool> VerifyMacOSCodeSignatureAsync(string filePath, CancellationToken cancellationToken)
+    {
+        // 使用 ArgumentList, 避免路径中的空格或 shell 字符改变校验目标。
+        var psi = new ProcessStartInfo
+        {
+            FileName = "/usr/bin/codesign",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        psi.ArgumentList.Add("--verify");
+        psi.ArgumentList.Add("--deep");
+        psi.ArgumentList.Add("--strict");
+        psi.ArgumentList.Add(filePath);
+
+        try
+        {
+            using var process = Process.Start(psi);
+            if (process is null) return false;
+            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            return process.ExitCode == 0;
+        }
+        catch (Win32Exception)
+        {
+            // codesign 缺失时必须拒绝, 不能把“无法校验”当成“已签名”。
+            return false;
+        }
     }
 
     // ===== Windows Authenticode (WinVerifyTrust) =====
 
     [SupportedOSPlatform("windows")]
-    private static unsafe bool VerifyWindowsAuthenticode(string filePath)
+    private static bool VerifyWindowsAuthenticode(string filePath)
     {
         // WinVerifyTrust 通过文件路径 + WINTRUST_DATA 结构触发 Authenticode / catalog 校验。
         // 这里走 Authenticode 路径: 设置 dwUIChoice = WTD_UI_NONE, fdwRevocationChecks = WTD_REVOKE_NONE,
         // dwUnionChoice = WTD_CHOICE_FILE, 调用一次 WinVerifyTrust 验证 PE 签名。
         var actionVerify = new Guid(WINTRUST_ACTION_GENERIC_VERIFY_V2);
         var filePathPtr = Marshal.StringToHGlobalUni(filePath);
+        var fileInfoPtr = IntPtr.Zero;
         try
         {
             var fileData = new WINTRUST_FILE_INFO
@@ -63,6 +91,8 @@ public sealed class PlatformCodeSignatureVerifier : ICodeSignatureVerifier
                 hFile = IntPtr.Zero,
                 pgKnownSubject = IntPtr.Zero,
             };
+            fileInfoPtr = Marshal.AllocHGlobal(Marshal.SizeOf<WINTRUST_FILE_INFO>());
+            Marshal.StructureToPtr(fileData, fileInfoPtr, fDeleteOld: false);
 
             var trustData = new WINTRUST_DATA
             {
@@ -70,7 +100,7 @@ public sealed class PlatformCodeSignatureVerifier : ICodeSignatureVerifier
                 dwUIChoice = WTD_UI_NONE,
                 fdwRevocationChecks = WTD_REVOKE_NONE,
                 dwUnionChoice = WTD_CHOICE_FILE,
-                pFile = &fileData,
+                pFile = fileInfoPtr,
                 dwStateAction = WTD_STATEACTION_IGNORE,
                 dwUIContext = 0,
                 pSignatureSettings = IntPtr.Zero,
@@ -88,6 +118,11 @@ public sealed class PlatformCodeSignatureVerifier : ICodeSignatureVerifier
         }
         finally
         {
+            if (fileInfoPtr != IntPtr.Zero)
+            {
+                try { Marshal.DestroyStructure<WINTRUST_FILE_INFO>(fileInfoPtr); } catch { }
+                Marshal.FreeHGlobal(fileInfoPtr);
+            }
             Marshal.FreeHGlobal(filePathPtr);
         }
     }
@@ -118,20 +153,20 @@ public sealed class PlatformCodeSignatureVerifier : ICodeSignatureVerifier
 
     [StructLayout(LayoutKind.Sequential)]
     [SupportedOSPlatform("windows")]
-    private unsafe struct WINTRUST_DATA
+    private struct WINTRUST_DATA
     {
         public uint cbStruct;
-        public uint dwPolicyCallbackData;
-        public uint dwSIPClientData;
+        public IntPtr pPolicyCallbackData;
+        public IntPtr pSIPClientData;
         public uint dwUIChoice;
         public uint fdwRevocationChecks;
         public uint dwUnionChoice;
-        public WINTRUST_FILE_INFO* pFile;
+        public IntPtr pFile;
         public uint dwStateAction;
         public IntPtr hWVTStateData;
         public IntPtr pwszURLReference;
+        public uint dwProvFlags;
         public uint dwUIContext;
         public IntPtr pSignatureSettings;
-        public IntPtr pSIPClientData;
     }
 }

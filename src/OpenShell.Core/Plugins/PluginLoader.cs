@@ -29,8 +29,8 @@ public sealed class PluginLoader : IPluginLoader
     // 不放入 LoadedPlugin 是为了避免外部持有 entry 引用阻止 ALC GC 回收。
     private readonly ConcurrentDictionary<string, IPluginEntryPoint> _entries = new(StringComparer.OrdinalIgnoreCase);
 
-    // ADR-0036 §6: Provider 沙箱声明, 按 provider 名存储。第三方 Provider 加载时从 [assembly: ProviderAssembly]
-    // 特性读取 SandboxLevel 并映射为 ProviderSandbox?; null 表示完全信任 (Full / None / 内置)。
+        // ADR-0036 §6: Provider 沙箱声明, 按 provider 名存储。第三方 Provider 加载时从 [assembly: ProviderAssembly]
+        // 特性读取 SandboxLevel 并映射为 ProviderSandbox。缺失声明必须拒绝, 不能静默变成完全信任。
     // 运行时由 SandboxContext.Current 传播, 供 §11 HTTP 拦截器与 §12 进程守卫读取。
     private readonly ConcurrentDictionary<string, ProviderSandbox?> _providerSandboxes = new(StringComparer.OrdinalIgnoreCase);
 
@@ -89,12 +89,19 @@ public sealed class PluginLoader : IPluginLoader
             // 2. 加载程序集。
             assembly = context.LoadPluginAssembly(assemblyPath);
 
-            // ADR-0036 §6: 读取 [assembly: ProviderAssembly] 特性的 Sandbox 级别, 映射为 ProviderSandbox?。
-            // 缺失特性时降级为 null (完全信任), 不阻断加载 (§15 拒绝策略由上层 manifest 校验负责)。
+            // ADR-0036 §6 / §15: 读取并校验 [assembly: ProviderAssembly] 声明。
             var sandboxAttr = assembly.GetCustomAttribute<ProviderAssemblyAttribute>();
-            sandbox = sandboxAttr is not null
-                ? SandboxLevelToProviderSandbox(sandboxAttr.Sandbox)
-                : null;
+            if (sandboxAttr is null)
+                throw new PluginLoadException(
+                    $"Plugin assembly '{assemblyPath}' is missing the required ProviderAssemblyAttribute.");
+            if (!string.Equals(sandboxAttr.Name, manifest.Name, StringComparison.OrdinalIgnoreCase))
+                throw new PluginLoadException(
+                    $"Plugin assembly declares provider '{sandboxAttr.Name}', but manifest declares '{manifest.Name}'.");
+            if (!Version.TryParse(sandboxAttr.Version, out var declaredVersion)
+                || !declaredVersion.Equals(manifest.Version))
+                throw new PluginLoadException(
+                    $"Plugin assembly declares version '{sandboxAttr.Version}', but manifest declares '{manifest.Version}'.");
+            sandbox = SandboxLevelToProviderSandbox(sandboxAttr.Sandbox);
 
             // 3. 解析入口类型。
             var entryType = assembly.GetType(manifest.EntryType);

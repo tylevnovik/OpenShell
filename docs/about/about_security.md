@@ -7,37 +7,39 @@ synopsis: Describes the current maturity of OpenShell security-sensitive subsyst
 
 ## SHORT DESCRIPTION
 
-OpenShell is in an early alpha stage. Several security-sensitive subsystems
-ship with development placeholders. This topic lists what is real, what is a
-placeholder, and what to avoid until the gaps are closed.
+OpenShell is in an early alpha stage. Security-sensitive paths are fail-closed
+where the platform capability is available; this topic lists the remaining
+limitations and the validation boundaries.
 
 ## LONG DESCRIPTION
 
 ### Provider package signature verification
 
-Package signature verification (ADR-0039) currently uses a development stub
-(`NullSignatureVerifier`): a package with any attached signature is accepted
-without cryptographic validation. Treat provider packages as untrusted code
-and only install packages from sources you trust.
+The CLI and dotnet tool register Ed25519SignatureVerifier, which validates the
+detached signature against the package payload hash. NullSignatureVerifier is
+retained for isolated tests and development fixtures only; production hosts
+must not register it. Unsigned packages still require a trusted source or an
+explicit matching trust key.
 
 ### Stored credentials
 
-SFTP credentials recorded by the credential provider are stored as plain-text
-JSON. Encrypted storage (DPAPI on Windows, keychain on Unix) is planned for a
-later milestone. Avoid storing credentials for accounts with broad access.
+SFTP metadata is stored in JSON without password/passphrase values. Secrets are
+stored in a separate encrypted store: Windows uses DPAPI and Unix uses an
+owner-protected AES-GCM file/key pair. Keep the OpenShell data directory private.
 
 ### Secure password entry
 
-The console password prompter reads input with a plain `ReadLine` fallback.
-OS-native secure prompts (CredUI / Security.framework / terminal echo-off)
-are planned replacements; until then, prefer credential files you manage
-yourself over interactive prompts in shared environments.
+Interactive terminal input disables echo and handles cancellation; redirected
+input is explicitly treated as non-interactive and reads a line. This is not
+an OS-native credential dialog, so avoid entering secrets where the controlling
+terminal or parent process is not trusted.
 
 ### Update code-signature checks
 
-On macOS the platform code-signature verifier is a placeholder that accepts
-updates without validation. Verify update sources manually when using the
-update service on macOS.
+On macOS the platform verifier invokes codesign --verify --deep --strict and
+rejects a missing tool or a non-zero verification result. Linux has no single
+portable platform signature API; update integrity there depends on the
+published SHA-256 digest when one is supplied.
 
 ### Remoting
 

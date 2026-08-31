@@ -720,12 +720,19 @@ public class GitHubReleasesUpdateService : IUpdateService
 
     private static async Task<bool> VerifySha256Async(string filePath, string expectedSha256, CancellationToken ct)
     {
+        // GitHub asset digest 通常形如 "sha256:<hex>"，规范化后再做恒定时间比较。
+        var expected = expectedSha256.Trim();
+        if (expected.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
+            expected = expected["sha256:".Length..];
+        if (expected.Length != 64 || !expected.All(Uri.IsHexDigit))
+            return false;
         using var sha = SHA256.Create();
         await using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read,
             bufferSize: 81920, useAsync: true);
         var hash = await sha.ComputeHashAsync(fs, ct).ConfigureAwait(false);
-        var actual = Convert.ToHexString(hash).ToLowerInvariant();
-        return string.Equals(actual, expectedSha256.ToLowerInvariant(), StringComparison.Ordinal);
+        var actual = Convert.FromHexString(Convert.ToHexString(hash));
+        var expectedBytes = Convert.FromHexString(expected);
+        return CryptographicOperations.FixedTimeEquals(actual, expectedBytes);
     }
 
     private static void TryDelete(string path)
