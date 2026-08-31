@@ -92,7 +92,9 @@ jobs:
         ports:
           - 2222:22
         env:
-          SFTP_USERS: "osuser:ospass:1001"
+          # syntax: user:pass[:e][:uid[:gid[:dir1[,dir2]]]] — atmoz 只会把列出的
+          # 目录建成可写；chroot home 本身 root 属主，不声明就没有任何可写位置。
+          SFTP_USERS: "osuser:ospass:1001:1001:upload"
     steps:
       - uses: actions/checkout@v4
 
