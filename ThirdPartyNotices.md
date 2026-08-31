@@ -32,9 +32,21 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+## SixLabors.ImageSharp
+
+Image preview decoding (IH-009, `ImagePreviewer` / `VideoPreviewer` thumbnail)
+uses SixLabors.ImageSharp (https://github.com/SixLabors/ImageSharp), a pure
+managed, cross-platform image codec library with no native binaries.
+
+ImageSharp 3.x is distributed under the Six Labors Split License: free
+(Apache-2.0-style) for individuals and organizations below the revenue
+threshold defined by Six Labors; larger commercial users require a paid
+license. See https://sixlabors.com/licenses/ and the package license
+metadata on nuget.org for the governing terms.
+
 ## NuGet dependencies
 
 Runtime dependencies (SSH.NET, BouncyCastle.Cryptography, Avalonia,
-ReactiveUI, Serilog, OpenTelemetry, Tomlyn, Microsoft.Data.Sqlite, and
-Microsoft.Extensions.*) are distributed under their respective open-source
-licenses; see each package's license metadata on nuget.org.
+ReactiveUI, Serilog, OpenTelemetry, Tomlyn, Microsoft.Data.Sqlite,
+SixLabors.ImageSharp, and Microsoft.Extensions.*) are distributed under
+their respective licenses; see each package's license metadata on nuget.org.

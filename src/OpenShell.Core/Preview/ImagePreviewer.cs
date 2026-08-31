@@ -1,34 +1,49 @@
 using OpenShell.Items;
 using OpenShell.Paths;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Processing;
 
 namespace OpenShell.Preview;
 
 /// <summary>
-/// 图片预览器。Per ADR-0030 §2.
-/// 支持格式: PNG / JPEG / GIF / BMP / WEBP / SVG (per ADR-0030 §2)。
-/// 实现限制 (per ADR-0030 §2 + 任务约束):
+/// 图片预览器。Per ADR-0030 §2。
+/// 支持格式: PNG / JPEG / GIF / BMP / WEBP (per ADR-0030 §2)。
+/// IH-009: 引入 <c>SixLabors.ImageSharp</c> (纯托管, 无原生二进制) 解码上述全部格式,
+/// 统一转码为 PNG 字节交给 GUI; SVG 仍需矢量渲染引擎, 显式返回 NotSupported。
+/// 实现要点:
 /// <list type="bullet">
-///   <item>未引用 SkiaSharp / System.Drawing.Common, 因此仅 PNG 文件能直接返回字节流 (已是 PNG 编码)。</item>
-///   <item>JPEG / GIF / BMP / WEBP / SVG 需 SkiaSharp 解码 → 暂返回 NotSupported, 提示需添加 SkiaSharp 包。</item>
-///   <item>未来集成: 在 OpenShell.Core.csproj 添加 <c>SkiaSharp</c> 后, 可在此处用 <c>SKBitmap.Decode(stream)</c> 解码并 <c>SKBitmap.Encode(SKEncodedImageFormat.Png, 100)</c> 转 PNG。</item>
+///   <item>输入字节超过 <see cref="MaxInputBytes"/> 时不解码, 直接 NotSupported (防内存放大)。</item>
+///   <item>解码后最长边超过 <see cref="MaxEdgePixels"/> 时按比例缩放为缩略图 (安全缩略)。</item>
+///   <item>无法识别 / 损坏的文件返回 <see cref="PreviewViewModel.NotSupported"/> 并附原因, 不抛异常。</item>
 /// </list>
-/// 大图缩放: 当前未实现 (需 SkiaSharp <c>SKBitmap.Resize</c>)。PNG 直接返回原始字节。
 /// </summary>
 public sealed class ImagePreviewer : IPreviewer
 {
-    private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+    /// <summary>输入文件字节上限 (默认 64MB); 超过则拒绝解码以避免内存放大。</summary>
+    public const long MaxInputBytes = 64L * 1024 * 1024;
+
+    /// <summary>解码后最长边像素上限; 超过则等比缩放到该值 (缩略图)。</summary>
+    public const int MaxEdgePixels = 4096;
+
+    private static readonly HashSet<string> RasterExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".svg",
+        ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp",
     };
 
-    // PNG 文件签名 (8 字节)。
-    private static readonly byte[] PngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-
     private readonly Func<ItemPath, CancellationToken, Task<Stream>> _openRead;
+    private readonly long _maxInputBytes;
 
     public ImagePreviewer(Func<ItemPath, CancellationToken, Task<Stream>> openRead)
+        : this(openRead, MaxInputBytes)
     {
-        _openRead = openRead;
+    }
+
+    /// <summary>可注入输入上限的重载 (测试用于验证资源上限行为)。</summary>
+    public ImagePreviewer(Func<ItemPath, CancellationToken, Task<Stream>> openRead, long maxInputBytes)
+    {
+        _openRead = openRead ?? throw new ArgumentNullException(nameof(openRead));
+        _maxInputBytes = maxInputBytes > 0 ? maxInputBytes : MaxInputBytes;
     }
 
     /// <inheritdoc />
@@ -37,7 +52,9 @@ public sealed class ImagePreviewer : IPreviewer
         if (item.Kind != ItemKind.File) return false;
         if (item.ContentType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true)
             return true;
-        return ImageExtensions.Contains(GetExtension(item.Path));
+        var ext = GetExtension(item.Path);
+        return RasterExtensions.Contains(ext)
+            || ext.Equals(".svg", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <inheritdoc />
@@ -45,57 +62,68 @@ public sealed class ImagePreviewer : IPreviewer
     {
         if (!CanPreview(item)) return null;
 
-        // 仅支持 PNG 直接读取 (无需解码); 其他格式需 SkiaSharp (per 任务约束: 不添加重依赖)。
-        var ext = GetExtension(item.Path);
-        if (!ext.Equals(".png", StringComparison.OrdinalIgnoreCase))
+        // SVG 需要矢量渲染引擎 (ImageSharp 不解码 SVG), 明确降级而非静默失败。
+        if (GetExtension(item.Path).Equals(".svg", StringComparison.OrdinalIgnoreCase))
         {
-            return new PreviewViewModel.NotSupported(
-                "Image decoding requires SkiaSharp (not referenced). PNG files are decoded natively.");
+            return new PreviewViewModel.NotSupported("SVG preview is not supported (vector rendering not available).");
         }
 
-        await using var stream = await _openRead(item.Path, ct).ConfigureAwait(false);
-
-        // 读 PNG 签名 + IHDR (前 24 字节) 获取宽高 (per PNG spec)。
-        // PNG layout: 8 字节签名 + 4 字节长度 + 4 字节 "IHDR" + 4 字节 width + 4 字节 height + ...
-        var header = new byte[24];
-        var read = 0;
-        while (read < header.Length)
+        // 读入字节并做大小上限保护 (防恶意/超大文件内存放大)。
+        byte[] bytes;
+        await using (var stream = await _openRead(item.Path, ct).ConfigureAwait(false))
         {
-            var n = await stream.ReadAsync(header.AsMemory(read, header.Length - read), ct).ConfigureAwait(false);
-            if (n == 0) break;
-            read += n;
-        }
-
-        if (read < 24)
-            return new PreviewViewModel.NotSupported("PNG file too small to contain IHDR.");
-
-        // 校验签名。
-        for (int i = 0; i < PngSignature.Length; i++)
-        {
-            if (header[i] != PngSignature[i])
-                return new PreviewViewModel.NotSupported("Not a valid PNG file (signature mismatch).");
-        }
-
-        // IHDR 在 offset 12, "IHDR" 在 offset 12, width 在 offset 16, height 在 offset 20 (big-endian)。
-        var width = (header[16] << 24) | (header[17] << 16) | (header[18] << 8) | header[19];
-        var height = (header[20] << 24) | (header[21] << 16) | (header[22] << 8) | header[23];
-
-        // 重置流位置并读取完整文件字节作为 PngData。
-        if (stream.CanSeek)
-        {
-            stream.Position = 0;
             using var ms = new MemoryStream();
-            await stream.CopyToAsync(ms, ct).ConfigureAwait(false);
-            return new PreviewViewModel.Image(ms.ToArray(), width, height);
+            var buffer = new byte[81920];
+            long total = 0;
+            int n;
+            while ((n = await stream.ReadAsync(buffer, ct).ConfigureAwait(false)) > 0)
+            {
+                total += n;
+                if (total > _maxInputBytes)
+                {
+                    return new PreviewViewModel.NotSupported(
+                        $"Image exceeds preview size limit ({_maxInputBytes / (1024 * 1024)}MB).");
+                }
+                ms.Write(buffer, 0, n);
+            }
+            bytes = ms.ToArray();
         }
-        else
+
+        if (bytes.Length == 0)
+            return new PreviewViewModel.NotSupported("Image file is empty.");
+
+        try
         {
-            // 非 seekable: 把已读 header 拼到剩余流。
-            var prefix = new MemoryStream(header, 0, read, writable: false);
-            using var concat = new ConcatStream(prefix, stream);
-            using var ms = new MemoryStream();
-            await concat.CopyToAsync(ms, ct).ConfigureAwait(false);
-            return new PreviewViewModel.Image(ms.ToArray(), width, height);
+            using var image = Image.Load(bytes);
+            ct.ThrowIfCancellationRequested();
+
+            // 安全缩略: 最长边超过上限时按比例缩放, 控制解码后内存与渲染开销。
+            var longest = Math.Max(image.Width, image.Height);
+            if (longest > MaxEdgePixels)
+            {
+                var target = new Size(
+                    Math.Max(1, (int)Math.Round(image.Width * (MaxEdgePixels / (double)longest))),
+                    Math.Max(1, (int)Math.Round(image.Height * (MaxEdgePixels / (double)longest))));
+                image.Mutate(ctx => ctx.Resize(new ResizeOptions
+                {
+                    Size = target,
+                    Mode = ResizeMode.Max,
+                    Sampler = KnownResamplers.Lanczos3,
+                }));
+            }
+
+            using var outStream = new MemoryStream();
+            image.Save(outStream, new PngEncoder());
+            return new PreviewViewModel.Image(outStream.ToArray(), image.Width, image.Height);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is ImageFormatException or NotSupportedException)
+        {
+            // 无法识别 / 损坏: 明确降级并给出原因, 不向调用方抛异常。
+            return new PreviewViewModel.NotSupported($"Unable to decode image: {ex.Message}");
         }
     }
 

@@ -115,7 +115,9 @@ public sealed class QuickLookCommand : ICommand<QuickLookCommand.Args>
         PreviewViewModel.Image i => $"Image: {i.Width}x{i.Height} PNG ({i.PngData.Length} bytes)",
         PreviewViewModel.Archive a => $"Archive: {a.Entries.Count} entries\n  - {string.Join("\n  - ", a.Entries.Take(20).Select(e => e.Name))}",
         PreviewViewModel.Pdf p => $"PDF (~{p.EstimatedPageCount} pages):\n{p.ExtractedText}",
-        PreviewViewModel.Video v => $"Video: {(v.Duration is { } d ? $"{d:hh\\:mm\\:ss}" : "duration unknown")}\n{v.Metadata ?? "(metadata unavailable)"}",
+        PreviewViewModel.Video v => $"Video: {(v.Duration is { } d ? $"{d:hh\\:mm\\:ss}" : "duration unknown")}" +
+            (v.ThumbnailPng is null ? "" : $"\nThumbnail: {v.ThumbnailWidth}x{v.ThumbnailHeight} PNG ({v.ThumbnailPng.Length} bytes)") +
+            $"\n{v.Metadata ?? "(metadata unavailable)"}",
         PreviewViewModel.NotSupported ns => $"Not supported: {ns.Reason}",
         _ => vm.ToString() ?? "(unknown preview)",
     };

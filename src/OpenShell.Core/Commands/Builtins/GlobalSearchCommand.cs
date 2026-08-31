@@ -55,10 +55,20 @@ public sealed class GlobalSearchCommand : ICommand<GlobalSearchCommand.Args>, IP
 
         // 1. 优先用长期索引 (per ADR-0030 §6 + §8: 全局搜索 + 索引)。
         var indexStore = ctx.Host.Services.GetService(typeof(FileIndexStore)) as FileIndexStore;
-        if (indexStore is not null)
+        var indexLifecycle = ctx.Host.Services.GetService(typeof(FileIndexLifecycleService)) as FileIndexLifecycleService;
+        var canUseIndexedSearch = !args.IncludeContents
+            && root.Provider.Equals("fs", StringComparison.OrdinalIgnoreCase)
+            && root.IsRooted
+            && indexStore is not null
+            && indexStore.HasEntries
+            && (indexLifecycle is null || indexLifecycle.IsReady);
+        if (canUseIndexedSearch)
         {
             var ftsQuery = ToFts5Query(args.Query);
-            var rows = indexStore.SearchByName(ftsQuery, limit: args.MaxResults);
+            var rows = indexStore!.SearchByName(
+                ftsQuery,
+                limit: args.MaxResults,
+                pathPrefix: root.InternalPath);
             var emitted = 0;
             foreach (var row in rows)
             {

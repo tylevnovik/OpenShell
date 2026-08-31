@@ -67,6 +67,11 @@
     <!-- ADR-0030 §8: 长期 SQLite/FTS5 文件索引 (含 Microsoft.Data.Sqlite)。
          9.0.0 与已引用的 Microsoft.Extensions.* 9.0.0 一致。 -->
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="9.0.0" />
+
+    <!-- IH-009 (ADR-0030 §2): 图片预览解码。ImageSharp 为纯托管跨平台解码库
+         (JPEG/GIF/BMP/WEBP → PNG), 无原生二进制; 许可证为 Six Labors Split License,
+         个人/小型组织使用免费, 详见 ThirdPartyNotices.md。 -->
+    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
   </ItemGroup>
 
 </Project>

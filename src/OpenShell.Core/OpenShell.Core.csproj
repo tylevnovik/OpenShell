@@ -31,6 +31,8 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
     <!-- ADR-0030 §8: 长期 SQLite/FTS5 文件索引 (Microsoft.Data.Sqlite 含 FTS5 支持)。 -->
     <PackageReference Include="Microsoft.Data.Sqlite" />
+    <!-- IH-009: 图片预览解码 (JPEG/GIF/BMP/WEBP → PNG, 纯托管)。 -->
+    <PackageReference Include="SixLabors.ImageSharp" />
   </ItemGroup>
 
   <!-- ADR-0048 §6.5: Import-Csv 复用 ConvertFromCsvCommand.ParseCsvLine 内部辅助方法，

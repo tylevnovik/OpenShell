@@ -356,7 +356,7 @@ internal sealed class QuickLookWindow : Window, IQuickLookWindow
         };
     }
 
-    /// <summary>视频预览: TextBlock 显示时长 + 元数据 (ffprobe 不可用时显示 unavailable)。</summary>
+    /// <summary>视频预览: 有缩略图则显示缩略图, 下方叠加时长 + 元数据文本。</summary>
     private Control BuildVideoPreview(PreviewViewModel.Video v)
     {
         var durationStr = v.Duration is { } d ? $"{d:hh\\:mm\\:ss}" : T("gui.quicklook.durationUnknown");
@@ -367,12 +367,45 @@ internal sealed class QuickLookWindow : Window, IQuickLookWindow
             FontFamily = new FontFamily("Consolas,Menlo,Monaco,monospace"),
             Margin = new Thickness(4),
         };
+
+        var body = new ScrollViewer { Content = textBlock };
+        if (v.ThumbnailPng is { Length: > 0 })
+        {
+            try
+            {
+                using var ms = new MemoryStream(v.ThumbnailPng);
+                DisposeBitmap();
+                _currentBitmap = new Bitmap(ms);
+                body = new ScrollViewer
+                {
+                    Content = new StackPanel
+                    {
+                        Children =
+                        {
+                            new Image
+                            {
+                                Source = _currentBitmap,
+                                Stretch = Stretch.Uniform,
+                                HorizontalAlignment = HorizontalAlignment.Center,
+                                MaxWidth = v.ThumbnailWidth > 0 ? v.ThumbnailWidth : 320,
+                            },
+                            textBlock,
+                        },
+                    },
+                };
+            }
+            catch
+            {
+                // 缩略图解码失败时退回纯元数据视图。
+            }
+        }
+
         return new DockPanel
         {
             Children =
             {
                 CreateDockedHeader(T("gui.quicklook.video")),
-                new ScrollViewer { Content = textBlock },
+                body,
             },
         };
     }

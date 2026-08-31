@@ -44,9 +44,14 @@ public abstract record PreviewViewModel
 
     /// <summary>
     /// 视频预览: 元数据 (时长 / 编码 / 分辨率); ffprobe 不可用时 Metadata=null。
-    /// 限制: 不渲染缩略图 (需 ffmpeg 二进制 + SkiaSharp 解码)。
+    /// IH-009: 可选缩略图 (ffmpeg 提取首帧转 PNG); ffmpeg 不可用时 ThumbnailPng=null, 保持纯元数据降级。
     /// </summary>
-    public sealed record Video(TimeSpan? Duration, string? Metadata) : PreviewViewModel;
+    public sealed record Video(
+        TimeSpan? Duration,
+        string? Metadata,
+        byte[]? ThumbnailPng = null,
+        int ThumbnailWidth = 0,
+        int ThumbnailHeight = 0) : PreviewViewModel;
 
     /// <summary>代码预览: 前 200 行带基础语法高亮 token (keyword/comment/string 分类) + 语言。</summary>
     public sealed record Code(string HighlightedContent, string Language, int TotalLines, bool Truncated) : PreviewViewModel;

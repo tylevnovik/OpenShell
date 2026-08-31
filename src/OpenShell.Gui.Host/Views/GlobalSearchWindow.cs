@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Data;
 using Avalonia.Input;
@@ -27,7 +28,10 @@ internal sealed class GlobalSearchWindow : Window
         Watermark = "Search files (Ctrl+Shift+F)...",
         Margin = new Thickness(4),
     };
+    private readonly CheckBox _includeContentsBox = new() { Margin = new Thickness(4, 4, 8, 4) };
+    private readonly Button _cancelButton = new() { Margin = new Thickness(4), IsVisible = false };
     private readonly ListBox _resultsList = new() { Margin = new Thickness(4) };
+    private readonly TextBlock _indexStatusText = new() { Margin = new Thickness(4, 0, 4, 0) };
     private readonly TextBlock _statusText = new() { Margin = new Thickness(4, 0, 4, 4) };
 
     private GlobalSearchViewModel? _vm;
@@ -45,6 +49,8 @@ internal sealed class GlobalSearchWindow : Window
 
         // T-312: 应用初始翻译 (覆盖字段初始化的英文占位符)。
         ApplyTranslations();
+        _includeContentsBox.Content = T("gui.search.includeContents");
+        _cancelButton.Content = T("gui.search.cancel");
 
         // T-312: 订阅 LocaleChanged 事件，动态切换语言后刷新窗口标题 + watermark。
         if (_i18n is not null)
@@ -66,7 +72,15 @@ internal sealed class GlobalSearchWindow : Window
         var queryBorder = new Border
         {
             Padding = new Thickness(4),
-            Child = _queryBox,
+            Child = new DockPanel
+            {
+                Children =
+                {
+                    DockControl(_cancelButton, Dock.Right),
+                    DockControl(_includeContentsBox, Dock.Right),
+                    _queryBox,
+                },
+            },
         };
         DockPanel.SetDock(queryBorder, Dock.Top);
 
@@ -74,7 +88,12 @@ internal sealed class GlobalSearchWindow : Window
         {
             Background = Brushes.LightGray,
             Padding = new Thickness(8, 2),
-            Child = _statusText,
+            Child = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 8,
+                Children = { _indexStatusText, _statusText },
+            },
         };
         DockPanel.SetDock(statusBorder, Dock.Bottom);
 
@@ -101,6 +120,8 @@ internal sealed class GlobalSearchWindow : Window
             {
                 _i18n.LocaleChanged -= OnLocaleChanged;
             }
+            _vm?.Dispose();
+            _vm = null;
         };
 
         // 双击结果 → NavigateToResultCommand + 关闭窗口。
@@ -120,7 +141,14 @@ internal sealed class GlobalSearchWindow : Window
             if (_vm is null) return;
 
             _queryBox.Bind(TextBox.TextProperty, new Binding("Query"));
+            _includeContentsBox.Bind(ToggleButton.IsCheckedProperty, new Binding("IncludeContents")
+            {
+                Mode = BindingMode.TwoWay,
+            });
+            _cancelButton.Bind(Button.CommandProperty, new Binding("CancelCommand"));
+            _cancelButton.Bind(Visual.IsVisibleProperty, new Binding("IsSearching"));
             _resultsList.ItemsSource = _vm.Results;
+            _indexStatusText.Bind(TextBlock.TextProperty, new Binding("IndexStatusText"));
             _statusText.Bind(TextBlock.TextProperty, new Binding("StatusText"));
 
             // Enter 触发搜索 (即时, 不等防抖)。
@@ -131,10 +159,29 @@ internal sealed class GlobalSearchWindow : Window
 
             _queryBox.Focus();
         };
+
+        _includeContentsBox.IsCheckedChanged += (_, _) => TriggerImmediateSearch();
+    }
+
+    private static T DockControl<T>(T control, Dock dock) where T : Control
+    {
+        DockPanel.SetDock(control, dock);
+        return control;
+    }
+
+    private void TriggerImmediateSearch()
+    {
+        if (_vm is not null && !string.IsNullOrWhiteSpace(_vm.Query))
+            _vm.SearchCommand.Execute().Subscribe(_ => { }, _ => { });
     }
 
     /// <summary>T-312: 翻译 key; i18n 未注入时回退到 key 本身。</summary>
-    private string T(string key, params object[] args) => _i18n?.Translate(key, args) ?? key;
+    private string T(string key, params object[] args) => _i18n?.Translate(key, args) ?? key switch
+    {
+        "gui.search.includeContents" => "Search contents",
+        "gui.search.cancel" => "Cancel",
+        _ => key,
+    };
 
     /// <summary>T-312: LocaleChanged 事件处理：在 UI 线程刷新窗口标题 + watermark。</summary>
     private void OnLocaleChanged(object? sender, string e)
@@ -147,5 +194,7 @@ internal sealed class GlobalSearchWindow : Window
     {
         Title = T("gui.search.title");
         _queryBox.Watermark = T("gui.search.watermark.full");
+        _includeContentsBox.Content = T("gui.search.includeContents");
+        _cancelButton.Content = T("gui.search.cancel");
     }
 }

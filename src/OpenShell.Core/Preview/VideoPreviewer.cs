@@ -11,14 +11,16 @@ namespace OpenShell.Preview;
 /// 视频预览器。Per ADR-0030 §2.
 /// 实现限制 (per 任务约束: 不添加重依赖):
 /// <list type="bullet">
-///   <item>不嵌入 ffmpeg/ffprobe 二进制, 仅在 PATH 上探测 ffprobe 可用性。</item>
+///   <item>不嵌入 ffmpeg/ffprobe 二进制, 仅在 PATH 上探测可用性。</item>
 ///   <item>ffprobe 不可用时返回 <see cref="PreviewViewModel.Video"/> (Metadata=null, Duration=null),
 ///     GUI 显示 "metadata unavailable"。</item>
-///   <item>不渲染缩略图 (需 ffmpeg 提取首帧 + SkiaSharp 解码); 完整实现留 M5+ 评估。</item>
+///   <item>IH-009: 若 PATH 上有 ffmpeg, 额外提取首帧生成缩略图 (PNG); 失败/缺失时降级为纯元数据。</item>
 /// </list>
 /// </summary>
 public sealed class VideoPreviewer : IPreviewer
 {
+    /// <summary>缩略图最长边像素上限。</summary>
+    public const int ThumbnailMaxEdge = 640;
     private static readonly HashSet<string> VideoExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".mp4", ".mkv", ".mov", ".avi", ".webm", ".flv", ".wmv", ".m4v", ".mpg", ".mpeg",
@@ -80,7 +82,10 @@ public sealed class VideoPreviewer : IPreviewer
 
             // 解析 JSON 输出 (per ffprobe -show_format -show_streams -of json)。
             var (duration, metadata) = ParseFfprobeJson(stdout);
-            return new PreviewViewModel.Video(duration, metadata);
+
+            // IH-009: ffmpeg 可用时提取首帧缩略图; 任何失败都降级为纯元数据, 不影响主预览。
+            var (thumbnail, thumbWidth, thumbHeight) = await TryCreateThumbnailAsync(localPath, ct).ConfigureAwait(false);
+            return new PreviewViewModel.Video(duration, metadata, thumbnail, thumbWidth, thumbHeight);
         }
         catch (OperationCanceledException)
         {
@@ -89,6 +94,69 @@ public sealed class VideoPreviewer : IPreviewer
         catch (Exception ex)
         {
             return new PreviewViewModel.Video(null, $"ffprobe failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// IH-009: 用 ffmpeg 提取首帧并转 PNG (最长边 <see cref="ThumbnailMaxEdge"/>)。
+    /// ffmpeg 缺失、运行失败或解码失败时返回 (null, 0, 0) —— 缩略图是增强项, 不允许拖垮元数据预览。
+    /// </summary>
+    private static async Task<(byte[]? Png, int Width, int Height)> TryCreateThumbnailAsync(
+        string mediaPath, CancellationToken ct)
+    {
+        var ffmpegPath = FindOnPath("ffmpeg");
+        if (ffmpegPath is null) return (null, 0, 0);
+
+        var tempPng = Path.Combine(
+            Path.GetTempPath(),
+            $"openshell-thumb-{Guid.NewGuid():N}.png");
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = ffmpegPath,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            // -frames:v 1: 只取首帧; scale 滤镜限制最长边, 避免大图占用内存。
+            psi.ArgumentList.Add("-v");
+            psi.ArgumentList.Add("error");
+            psi.ArgumentList.Add("-i");
+            psi.ArgumentList.Add(mediaPath);
+            psi.ArgumentList.Add("-frames:v");
+            psi.ArgumentList.Add("1");
+            psi.ArgumentList.Add("-vf");
+            psi.ArgumentList.Add($"scale='min({ThumbnailMaxEdge},iw)':-2");
+            psi.ArgumentList.Add("-f");
+            psi.ArgumentList.Add("image2");
+            psi.ArgumentList.Add("-y");
+            psi.ArgumentList.Add(tempPng);
+
+            using var proc = new Process { StartInfo = psi };
+            if (!proc.Start()) return (null, 0, 0);
+            await proc.WaitForExitAsync(ct).ConfigureAwait(false);
+            if (proc.ExitCode != 0 || !File.Exists(tempPng)) return (null, 0, 0);
+
+            var bytes = await File.ReadAllBytesAsync(tempPng, ct).ConfigureAwait(false);
+            if (bytes.Length < 8) return (null, 0, 0);
+
+            // 用 ImageSharp 读取真实尺寸 (PNG IHDR), 与 Image 预览一致。
+            using var image = SixLabors.ImageSharp.Image.Load(bytes);
+            return (bytes, image.Width, image.Height);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return (null, 0, 0);
+        }
+        finally
+        {
+            try { if (File.Exists(tempPng)) File.Delete(tempPng); } catch { /* 临时文件清理失败可忽略 */ }
         }
     }
 

@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="OpenShell.Gui.Host.Views.PreviewPane"
+             x:CompileBindings="False"
+             Background="{DynamicResource ShellElevatedSurfaceBrush}">
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Padding="10,8"
+            BorderBrush="{DynamicResource ShellBorderBrush}" BorderThickness="0,0,0,1">
+      <TextBlock Text="gui.previewPane.title" FontWeight="SemiBold"/>
+    </Border>
+    <TextBlock x:Name="StatusText" Text="Select an item to preview"
+               Margin="10" Foreground="{DynamicResource ShellTextSecondaryBrush}"
+               TextWrapping="Wrap"/>
+    <ContentControl x:Name="PreviewContent" Margin="8"/>
+  </DockPanel>
+</UserControl>

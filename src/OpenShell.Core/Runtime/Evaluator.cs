@@ -1532,13 +1532,13 @@ public sealed class Evaluator
     /// <item>其他: 原样返回。</item>
     /// </list>
     /// </summary>
-    private object? UnwrapAwaitable(object? value)
+    internal object? UnwrapAwaitable(object? value)
     {
         if (value is null) return null;
 
         if (value is Task task)
         {
-            task.GetAwaiter().GetResult();
+            BlockSafe(() => task.GetAwaiter().GetResult());
             var resultProp = task.GetType().GetProperty("Result");
             if (resultProp is null) return null;
             var taskResult = resultProp.GetValue(task);
@@ -1547,27 +1547,56 @@ public sealed class Evaluator
 
         if (value is ValueTask vt)
         {
-            vt.GetAwaiter().GetResult();
+            BlockSafe(() => vt.GetAwaiter().GetResult());
             return null;
         }
 
         if (value is IAsyncEnumerable<IItem> stream)
         {
-            var list = new List<IItem>();
-            var e = stream.GetAsyncEnumerator(_ctx.CancellationToken);
-            try
-            {
-                while (e.MoveNextAsync().AsTask().GetAwaiter().GetResult())
-                    list.Add(e.Current);
-            }
-            finally
-            {
-                e.DisposeAsync().AsTask().GetAwaiter().GetResult();
-            }
-            return list;
+            return BlockSafe(() => DrainStream(stream));
         }
 
         return value;
+    }
+
+    /// <summary>同步收集异步流到列表 (调用方可能处于任意线程)。</summary>
+    private List<IItem> DrainStream(IAsyncEnumerable<IItem> stream)
+    {
+        var list = new List<IItem>();
+        var e = stream.GetAsyncEnumerator(_ctx.CancellationToken);
+        try
+        {
+            while (e.MoveNextAsync().AsTask().GetAwaiter().GetResult())
+                list.Add(e.Current);
+        }
+        finally
+        {
+            e.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// IH-008: 安全的同步等待桥。无 <see cref="SynchronizationContext"/> 的线程 (CLI REPL) 直接等待,
+    /// 零开销; 带上下文的线程 (GUI / UI 线程) 把等待整体搬到线程池执行, 使异步延续不再捕获被阻塞的
+    /// 上下文, 消除 "UI 线程同步等待 → 延续排队回 UI 线程 → 死锁" 的闭环。
+    /// </summary>
+    private static void BlockSafe(Action work)
+    {
+        if (SynchronizationContext.Current is null)
+        {
+            work();
+            return;
+        }
+        Task.Run(work).GetAwaiter().GetResult();
+    }
+
+    /// <summary>IH-008: <see cref="BlockSafe(Action)"/> 的带返回值重载。</summary>
+    private static T BlockSafe<T>(Func<T> work)
+    {
+        if (SynchronizationContext.Current is null)
+            return work();
+        return Task.Run(work).GetAwaiter().GetResult();
     }
 
     // =========================================================================
@@ -1991,29 +2020,18 @@ public sealed class Evaluator
         {
             if (_ctx.Host is not null)
             {
-                // 同步等待 Host 消费流（REPL 单线程上下文可接受）
-                _ctx.Host.WriteItemsAsync(stream, _ctx.CancellationToken).GetAwaiter().GetResult();
+                // IH-008: 经 BlockSafe 等待, 带同步上下文 (GUI) 时搬到线程池, 避免与延续互锁。
+                BlockSafe(() => _ctx.Host.WriteItemsAsync(stream, _ctx.CancellationToken).GetAwaiter().GetResult());
                 return null;
             }
             // 无 Host：同步收集到列表
-            var list = new List<IItem>();
-            var e = stream.GetAsyncEnumerator(_ctx.CancellationToken);
-            try
-            {
-                while (e.MoveNextAsync().AsTask().GetAwaiter().GetResult())
-                    list.Add(e.Current);
-            }
-            finally
-            {
-                e.DisposeAsync().AsTask().GetAwaiter().GetResult();
-            }
-            return list;
+            return BlockSafe(() => DrainStream(stream));
         }
 
         // Task<T> / Task：等待并解包 Result
         if (result is Task task)
         {
-            task.GetAwaiter().GetResult();
+            BlockSafe(() => task.GetAwaiter().GetResult());
             var resultProp = task.GetType().GetProperty("Result");
             if (resultProp is not null)
             {
@@ -2026,7 +2044,7 @@ public sealed class Evaluator
         // ValueTask：等待
         if (result is ValueTask vt)
         {
-            vt.GetAwaiter().GetResult();
+            BlockSafe(() => vt.GetAwaiter().GetResult());
             return null;
         }
 
@@ -2039,6 +2057,13 @@ public sealed class Evaluator
     {
         var positional = new List<object?>();
         var named = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+        var parametersByName = new Dictionary<string, ParameterDescriptor>(StringComparer.OrdinalIgnoreCase);
+        foreach (var parameter in desc.Parameters)
+        {
+            parametersByName[parameter.Name] = parameter;
+            foreach (var alias in parameter.Aliases)
+                parametersByName[alias.TrimStart('-')] = parameter;
+        }
 
         foreach (var arg in arguments)
         {
@@ -2048,23 +2073,32 @@ public sealed class Evaluator
                     positional.Add(EvaluateExpression(pa.Value).Value);
                     break;
                 case NamedArgument na:
+                    if (!parametersByName.TryGetValue(na.Name, out var namedParameter))
+                        throw new CommandArgumentException(
+                            $"Unknown parameter '-{na.Name}' for command '{desc.FullName}'.");
+                    if (named.ContainsKey(namedParameter.Name))
+                        throw new CommandArgumentException(
+                            $"Parameter '-{namedParameter.Name}' was specified more than once for command '{desc.FullName}'.");
                     // Parser 对 -Name value 形式统一产生 NamedArgument。
                     // 若目标参数是 bool（switch），则值应回流到位置参数（PowerShell 语义）。
-                    var switchParam = desc.Parameters.FirstOrDefault(p =>
-                        string.Equals(p.Name, na.Name, StringComparison.OrdinalIgnoreCase)
-                        || p.Aliases.Any(a => string.Equals(a.TrimStart('-'), na.Name, StringComparison.OrdinalIgnoreCase)));
-                    if (switchParam?.Type == typeof(bool))
+                    if (namedParameter.Type == typeof(bool))
                     {
-                        named[na.Name] = true;
+                        named[namedParameter.Name] = true;
                         positional.Add(EvaluateExpression(na.Value).Value);
                     }
                     else
                     {
-                        named[na.Name] = EvaluateExpression(na.Value).Value;
+                        named[namedParameter.Name] = EvaluateExpression(na.Value).Value;
                     }
                     break;
                 case SwitchArgument sa:
-                    named[sa.Name] = true;
+                    if (!parametersByName.TryGetValue(sa.Name, out var switchParameter))
+                        throw new CommandArgumentException(
+                            $"Unknown parameter '-{sa.Name}' for command '{desc.FullName}'.");
+                    if (named.ContainsKey(switchParameter.Name))
+                        throw new CommandArgumentException(
+                            $"Parameter '-{switchParameter.Name}' was specified more than once for command '{desc.FullName}'.");
+                    named[switchParameter.Name] = true;
                     break;
                 case ScriptBlockArgument sba:
                     // 脚本块作为位置参数（cmd { }）：包装为 ScriptBlock 对象
@@ -2153,10 +2187,21 @@ public sealed class Evaluator
             // 默认值
             if (!matched)
             {
-                value = p.HasDefaultValue ? p.DefaultValue : null;
+                if (pdesc.Mandatory || !p.HasDefaultValue)
+                    throw new CommandArgumentException(
+                        $"Parameter '-{pdesc.Name}' is required for command '{desc.FullName}'.");
+                value = p.DefaultValue;
             }
 
-            argsValues[i] = ConvertValue(value, p.ParameterType);
+            try
+            {
+                argsValues[i] = ConvertValue(value, p.ParameterType);
+            }
+            catch (Exception ex) when (ex is not CommandArgumentException)
+            {
+                throw new CommandArgumentException(
+                    $"Invalid value for parameter '-{pdesc.Name}' on command '{desc.FullName}': {ex.Message}", ex);
+            }
         }
 
         return constructor.Invoke(argsValues)

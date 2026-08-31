@@ -80,6 +80,10 @@ public static class PreviewServiceCollectionExtensions
         services.AddSingleton<FileIndexStore>(sp =>
             new FileIndexStore(OpenShellPaths.FileIndexDb, sp.GetService<ILogger<FileIndexStore>>()));
 
+        // 索引库必须在 host 启动时恢复；空索引由 Search-Global 回退到实时枚举。
+        services.AddSingleton<FileIndexLifecycleService>();
+        services.AddHostedService(sp => sp.GetRequiredService<FileIndexLifecycleService>());
+
         // ---- IFileNameSearchService (per ADR-0030 §4: 优先索引, 回退 provider 枚举) ----
         services.AddSingleton<IFileNameSearchService>(sp =>
         {
