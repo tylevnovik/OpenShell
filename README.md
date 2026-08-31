@@ -15,14 +15,14 @@
 
 ## Security & maturity notice
 
-Several security-sensitive subsystems currently ship with **development placeholders** and must not be relied upon in adversarial environments:
+OpenShell is alpha software. The following security-sensitive boundaries should be understood before using it in adversarial environments:
 
 | Area | Status |
 |------|--------|
-| Provider package signature verification | Stub (`NullSignatureVerifier`) — signatures are not actually validated. Do not install untrusted packages. |
-| Stored SFTP credentials | Plain-text JSON until DPAPI/keychain integration lands. |
-| Secure password prompt | Plain console input fallback until OS-native prompts are implemented. |
-| macOS update code-signature check | Placeholder (returns true). |
+| Provider package signature verification | CLI and dotnet tool use Ed25519 verification; NullSignatureVerifier remains test-only and must not be registered in production. |
+| Stored SFTP credentials | Metadata is stored separately from secrets; Windows uses DPAPI and Unix uses an owner-protected encrypted secret file. |
+| Secure password prompt | Interactive terminals suppress echo; redirected input uses an explicit non-interactive path. |
+| macOS update code-signature check | Uses /usr/bin/codesign --verify --deep --strict; missing/invalid signatures are rejected. |
 | WinRM remoting transport | Documented in ADR-0059 but not implemented. |
 
 Run `Get-Help about_security` inside the shell (from a repository checkout) for details.

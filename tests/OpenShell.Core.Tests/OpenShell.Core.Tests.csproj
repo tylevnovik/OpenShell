@@ -16,6 +16,8 @@
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="NSubstitute" />
     <PackageReference Include="Coverlet.collector" />
+    <!-- IH-011: 覆盖率门禁 (CI Coverage gate 用 /p:CollectCoverage + /p:Threshold)。 -->
+    <PackageReference Include="Coverlet.msbuild" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <!-- 解决 NSubstitute → Castle.Core 传递依赖的 NU1603 警告。 -->
     <PackageReference Include="System.ComponentModel.TypeConverter" />

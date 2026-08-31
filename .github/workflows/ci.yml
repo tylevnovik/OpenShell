@@ -58,3 +58,73 @@ jobs:
         with:
           name: coverage-${{ matrix.os }}
           path: ./TestResults/**/coverage.cobertura.xml
+
+      # IH-011: GUI 自动化门禁——Avalonia headless 行为测试必须全绿。
+      # (常规 Test 步骤已包含; 此处单独重跑一次以便在 CI 日志中定位失败归属。)
+      - name: GUI automation gate
+        if: matrix.os == 'ubuntu-latest'
+        run: >
+          dotnet test tests/OpenShell.Gui.Host.Tests/OpenShell.Gui.Host.Tests.csproj
+          --configuration Release
+          --no-build
+
+      # IH-011: 覆盖率门禁——Core 行覆盖率低于阈值时构建失败。
+      # 基线: 2026-08-31 全量实测 46.6% (Windows); 阈值留出平台间跳过项差异余量, 只升不降。
+      - name: Coverage gate
+        if: matrix.os == 'ubuntu-latest'
+        run: >
+          dotnet test tests/OpenShell.Core.Tests/OpenShell.Core.Tests.csproj
+          --configuration Release
+          /p:CollectCoverage=true
+          /p:Threshold=43
+          /p:ThresholdType=line
+          /p:ThresholdStat=total
+          /p:CoverletOutputFormat=cobertura
+
+  # IH-006: 隔离 OpenSSH 容器上的真实 SFTP 集成测试。
+  # 无容器时套件自动 Skip; 本作业保证每次 CI 都有真实服务器可连。
+  remote-integration:
+    name: SFTP integration (ubuntu)
+    runs-on: ubuntu-latest
+    services:
+      sftp:
+        image: atmoz/sftp:debian
+        ports:
+          - 2222:22
+        env:
+          SFTP_USERS: "osuser:ospass:1001"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore OpenShell.slnx
+
+      - name: Build
+        run: dotnet build OpenShell.slnx --configuration Release --no-restore
+
+      - name: Run real SFTP integration tests
+        run: >
+          dotnet test tests/OpenShell.Providers.Remote.Tests/OpenShell.Providers.Remote.Tests.csproj
+          --configuration Release
+          --no-build
+          --filter "FullyQualifiedName~SftpIntegrationTests"
+          --logger "trx;LogFileName=sftp-integration.trx"
+          --results-directory ./TestResults
+        env:
+          OPENSHELL_TEST_SFTP_HOST: localhost
+          OPENSHELL_TEST_SFTP_PORT: '2222'
+          OPENSHELL_TEST_SFTP_USER: osuser
+          OPENSHELL_TEST_SFTP_PASSWORD: ospass
+          OPENSHELL_TEST_SFTP_ROOT: /upload
+
+      - name: Upload integration results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sftp-integration-results
+          path: ./TestResults/**/*.trx
